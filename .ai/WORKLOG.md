@@ -37,3 +37,12 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - Decided the MVP will use the OpenAI SDK for photo recognition instead of the local YOLO/MobileCLIP/PP-OCR pipeline; the local pipeline is deferred to a later cost-optimization phase.
 - Cloud API recognition will remain a permanent fallback path in the developed product (local-first, cloud fallback behind one recognition interface).
 - Updated SUMMARY.md with a Decisions section and refreshed the current state.
+
+## 2026-07-17 — Project scaffold (frontend + backend)
+
+- Backend: FastAPI app at backend/main.py with POST /api/upload (saves to data/photos/), serves frontend/dist when built. Deps (fastapi, uvicorn, python-multipart) managed by uv at repo root.
+- Frontend: replaced naive HTML page with Vite + React + TypeScript scaffold in frontend/; typed upload component in src/App.tsx; dev proxy /api → backend (VITE_API_TARGET overridable) in vite.config.ts.
+- Removed uv-init boilerplate (root main.py) and backend/requirements.txt (pyproject.toml is the single dep record).
+- Filled README.md (layout, dev commands, PC deploy steps). Updated SUMMARY.md decisions (stack, PC runs backend only, English-only MVP, online recipes deferred).
+- Verified: npm run build passes; curl upload → file lands in data/photos/, JSON reply correct; GET / serves built frontend.
+- Next: Charles tests two-terminal dev flow on iMac, then commit/push and clone on PC.
