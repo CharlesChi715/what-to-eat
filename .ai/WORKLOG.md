@@ -32,3 +32,8 @@ Newest first. One entry per completed deliverable.
    http://192.168.0.12:8000
 
 If it stops working after a WSL restart, recreate step 6 because the WSL IP can change.
+## 2026-07-17
+
+- Decided the MVP will use the OpenAI SDK for photo recognition instead of the local YOLO/MobileCLIP/PP-OCR pipeline; the local pipeline is deferred to a later cost-optimization phase.
+- Cloud API recognition will remain a permanent fallback path in the developed product (local-first, cloud fallback behind one recognition interface).
+- Updated SUMMARY.md with a Decisions section and refreshed the current state.
