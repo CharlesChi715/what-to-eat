@@ -27,6 +27,7 @@ For details read `docs/MY_Devices.md`.
 
 ## Decisions
 
+- MVP photo recognition uses the Gemini API (`gemini-3-flash-preview`) and returns only visible edible-object candidates; label OCR remains a separate later step.
 - Local recognition pipeline is deferred to a later cost-optimization phase, behind the same recognition interface.
 - In the later product, the cloud API stays as a permanent fallback (local server unreachable, low-confidence results, model failures).
 - In long term, optimize the preference by preference of each diet in long term.
@@ -37,5 +38,5 @@ For details read `docs/MY_Devices.md`.
 
 ## Current State / Next Step
 
-- Scaffold done and verified locally: photo upload round-trip (React page → FastAPI → data/photos/) works; frontend builds; backend serves dist.
-- Next: Charles runs the two dev servers on iMac and tests in browser; then commit + push, clone on PC, run backend there.
+- Upload flow saves the original photo, sends it to Gemini 3 Flash, and returns structured edible-item candidates for confirmation.
+- Next: set `GEMINI_API_KEY`, run both dev servers, and test recognition with food and non-food photos.

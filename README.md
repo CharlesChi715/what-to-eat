@@ -2,7 +2,7 @@
 
 A low-cost personal food-inventory and recipe app. Take a photo of food, confirm what it is, track quantities and expiry dates, and get recipe suggestions for what needs using up.
 
-Status: early MVP — currently a photo-upload round trip (browser → backend → disk).
+Status: early MVP — photo upload and Gemini edible-object recognition are wired end to end.
 
 ## Repo layout
 
@@ -17,6 +17,15 @@ pyproject.toml      Python dependency record (+ uv.lock)
 ## Development (one machine)
 
 Prerequisites: [uv](https://docs.astral.sh/uv/), Node.js 20+.
+
+Create a Gemini API key in Google AI Studio, then expose it to the backend shell:
+
+```bash
+export GEMINI_API_KEY="your-api-key"
+```
+
+The backend uses `gemini-3-flash-preview` by default. To test another compatible
+model without changing code, set `GEMINI_MODEL` in the same shell.
 
 Two terminals from the repo root:
 

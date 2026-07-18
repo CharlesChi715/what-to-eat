@@ -3,6 +3,14 @@ import { useState } from "react";
 interface UploadReply {
   saved: string;
   size_kb: number;
+  recognition: {
+    model: string;
+    edible_items: Array<{
+      name: string;
+      form: string | null;
+      certainty: "high" | "medium" | "low";
+    }>;
+  };
 }
 
 export default function App() {
@@ -20,7 +28,8 @@ export default function App() {
     try {
       const res = await fetch("/api/upload", { method: "POST", body: form });
       if (!res.ok) {
-        setReply(`Server error: HTTP ${res.status}`);
+        const error = await res.json().catch(() => null);
+        setReply(error?.detail ?? `Server error: HTTP ${res.status}`);
         return;
       }
       const data: UploadReply = await res.json();

@@ -52,3 +52,10 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - Filled README.md (layout, dev commands, PC deploy steps). Updated SUMMARY.md decisions (stack, PC runs backend only, English-only MVP, online recipes deferred).
 - Verified: npm run build passes; curl upload → file lands in data/photos/, JSON reply correct; GET / serves built frontend.
 - Next: Charles tests two-terminal dev flow on iMac, then commit/push and clone on PC.
+
+## 2026-07-18 — Gemini edible-object recognition
+
+- Added Gemini 3 Flash image recognition to the existing upload endpoint.
+- Restricted structured candidates to directly visible edible objects; OCR and barcode lookup remain separate.
+- Added upload validation, frontend error details, setup documentation, and backend tests.
+- Verified: backend unit tests pass; frontend production build passes. Live Gemini call awaits `GEMINI_API_KEY`.
