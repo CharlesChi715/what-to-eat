@@ -24,6 +24,12 @@ Newest first. One entry per completed deliverable.
 
 6. Forward Windows port 8000 to WSL2:
    netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=8000 connectaddress=$wslIp connectport=8000
+<!-- # Data transmission flow:
+iMac
+→ 192.168.0.12:8000       Windows listenport
+→ 172.18.13.22:8000       WSL2 connectport (doesnt have to be same)
+→ Uvicorn/FastAPI -->
+
 
 7. Check the forwarding rule:
    netsh interface portproxy show all
