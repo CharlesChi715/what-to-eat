@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
 from backend.recognition import (
     RecognitionNotConfiguredError,
@@ -12,6 +13,8 @@ from backend.recognition import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(REPO_ROOT / ".env")
+
 PHOTOS_DIR = REPO_ROOT / "data" / "photos"
 FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
 # Inline bytes are base64-encoded in transit, so stay below Gemini's 20 MB
@@ -32,6 +35,7 @@ app = FastAPI()
 
 @app.post("/api/upload")
 async def upload_photo(photo: UploadFile) -> dict[str, Any]:
+    print(f"Received upload: {photo.filename} ({photo.content_type})")
     mime_type = (photo.content_type or "").lower()
     if mime_type == "image/jpg":
         mime_type = "image/jpeg"
@@ -66,6 +70,8 @@ async def upload_photo(photo: UploadFile) -> dict[str, Any]:
             detail="Gemini could not recognize this image. Try again.",
         ) from exc
 
+    print(f"Saved photo to {dest} ({len(content)} bytes)")
+    print(f"Recognition result: {recognition}")
     return {
         "saved": str(dest.relative_to(REPO_ROOT)),
         "size_kb": round(len(content) / 1024, 1),

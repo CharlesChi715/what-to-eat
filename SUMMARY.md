@@ -39,4 +39,5 @@ For details read `docs/MY_Devices.md`.
 ## Current State / Next Step
 
 - Upload flow saves the original photo, sends it to Gemini 3 Flash, and returns structured edible-item candidates for confirmation.
-- Next: set `GEMINI_API_KEY`, run both dev servers, and test recognition with food and non-food photos.
+- Backend loads `GEMINI_API_KEY` from the gitignored root `.env` file.
+- Next: add the real key to `.env`, run both dev servers, and test recognition with food and non-food photos.

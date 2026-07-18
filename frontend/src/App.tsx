@@ -33,6 +33,7 @@ export default function App() {
         return;
       }
       const data: UploadReply = await res.json();
+      console.log("Upload reply:", data);
       setReply(JSON.stringify(data, null, 2));
     } catch (err) {
       setReply(`Server unreachable: ${(err as Error).message}`);

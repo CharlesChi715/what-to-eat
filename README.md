@@ -18,14 +18,22 @@ pyproject.toml      Python dependency record (+ uv.lock)
 
 Prerequisites: [uv](https://docs.astral.sh/uv/), Node.js 20+.
 
-Create a Gemini API key in Google AI Studio, then expose it to the backend shell:
+Create a Gemini API key in Google AI Studio. Then copy the safe template and
+put the real key in the new `.env` file:
 
 ```bash
-export GEMINI_API_KEY="your-api-key"
+cp .env.example .env
 ```
 
-The backend uses `gemini-3-flash-preview` by default. To test another compatible
-model without changing code, set `GEMINI_MODEL` in the same shell.
+```dotenv
+GEMINI_API_KEY=your-real-key
+```
+
+The backend loads the root `.env` automatically. `.env` is ignored by Git;
+never put the real key in `.env.example`.
+
+To test another compatible
+model without changing code, set `GEMINI_MODEL` in `.env`.
 
 Two terminals from the repo root:
 

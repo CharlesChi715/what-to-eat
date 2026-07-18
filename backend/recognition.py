@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
 
 RECOGNITION_PROMPT = """
 Identify only edible food objects that are visibly present in this image.
@@ -43,12 +43,14 @@ async def recognize_edible_items(
     image_bytes: bytes,
     mime_type: str,
 ) -> tuple[str, RecognitionResult]:
+    print(f"Recognizing edible items in image ({len(image_bytes)} bytes, {mime_type})")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RecognitionNotConfiguredError(
             "GEMINI_API_KEY is not configured on the backend."
         )
 
+    print("DEFAULT_GEMINI_MODEL:", DEFAULT_GEMINI_MODEL)
     model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     client = genai.Client(api_key=api_key)
     try:
@@ -66,6 +68,7 @@ async def recognize_edible_items(
     finally:
         await client.aio.aclose()
 
+    print(f"Gemini recognition response: {response!r}")
     if isinstance(response.parsed, RecognitionResult):
         result = response.parsed
     elif response.text:

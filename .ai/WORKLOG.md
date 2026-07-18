@@ -59,3 +59,18 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - Restricted structured candidates to directly visible edible objects; OCR and barcode lookup remain separate.
 - Added upload validation, frontend error details, setup documentation, and backend tests.
 - Verified: backend unit tests pass; frontend production build passes. Live Gemini call awaits `GEMINI_API_KEY`.
+
+## 2026-07-18 — Local Gemini secret configuration
+
+- Added automatic root `.env` loading with `python-dotenv`.
+- Added a gitignored local `.env`, a safe `.env.example`, and setup documentation.
+
+## 2026-07-18 — Restore Gemini 3 Flash model
+
+- Diagnosed a 404 caused by the retired `gemini-1.5-flash` model ID and restored `gemini-3-flash-preview`.
+
+## 2026-07-18 — Gemini API billing blocker
+
+- Live Gemini 3 Flash recognition is blocked by:
+  `google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billing. Learn more at https://ai.google.dev/gemini-api/docs/billing#prepay. ', 'status': 'RESOURCE_EXHAUSTED'}}`
+- Next action: add or restore prepaid credits for the Gemini API project, then retry the upload.
