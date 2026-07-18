@@ -2,16 +2,17 @@
 
 ## Goal for this project
 
-- Build a low-cost food inventory and recipe app. (For now build a MVP only)
+- Build a low-cost food inventory and recipe app. (For now build a MVP only details in `docs/MVP_WORKFLOW.md`)
 
 ## Goal for agent 
 
 - Slowly delivery. Think more, output less. All focus on guide me teach me inspire me.
 
 ## My devices
-Read it in the path stored in you memory.
 - Frontend: web page
 - Backend: My PC with WSL2.
+- Communicate through home WIFI router.
+For details read `docs/MY_Devices.md`.
 
 ## Requirements
 
