@@ -2,6 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile
+from typing import Any
 from fastapi.staticfiles import StaticFiles
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -12,7 +13,7 @@ app = FastAPI()
 
 
 @app.post("/api/upload")
-async def upload_photo(photo: UploadFile):
+async def upload_photo(photo: UploadFile) -> dict[str, Any]:
     PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
     suffix = Path(photo.filename or "photo.jpg").suffix or ".jpg"
     dest = PHOTOS_DIR / f"{uuid4().hex}{suffix}"
