@@ -2,3 +2,14 @@ body {
   font-family: system-ui, sans-serif;
   margin: 2rem;
 }
+
+main {
+  max-width: 48rem;
+}
+
+.sent-image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}

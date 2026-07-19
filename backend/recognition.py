@@ -1,48 +1,49 @@
+import asyncio
 import base64
+from io import BytesIO
 import os
-from typing import Literal
 
 from openai import AsyncOpenAI
-from pydantic import BaseModel, Field
+from pillow_heif import open_heif
 
 DEFAULT_OPENAI_MODEL = "gpt-5.6-sol"
+HEIF_IMAGE_TYPES = {
+    "image/heic",
+    "image/heif",
+    "image/heic-sequence",
+    "image/heif-sequence",
+}
 
 RECOGNITION_PROMPT = """
-Identify only edible food objects that are visibly present in this image.
-
-Rules:
-- Return raw or cooked food items that can be seen directly.
-- Use ordinary ingredient names, such as "tomato" or "chicken breast".
-- Ignore plates, bowls, utensils, hands, appliances, packaging, labels, and all
-  other non-food objects.
-- Do not perform label OCR and do not infer hidden ingredients from a prepared
-  dish. Include a component only when it is visually distinguishable.
-- If no edible food object is visible, return an empty list.
-- Mark all certainty as low in this round.
+Describe the edible food objects that are visibly present in this image.
 """.strip()
-
-
-class EdibleItem(BaseModel):
-    name: str = Field(description="Concise, generic name of the visible edible item")
-    form: str | None = Field(
-        default=None,
-        description="Visible form when useful, such as whole, sliced, chopped, raw, or cooked",
-    )
-    certainty: Literal["high", "medium", "low"]
-
-
-class RecognitionResult(BaseModel):
-    edible_items: list[EdibleItem]
 
 
 class RecognitionNotConfiguredError(RuntimeError):
     pass
 
 
+class InvalidImageError(ValueError):
+    pass
+
+
+def _convert_heif_to_jpeg(image_bytes: bytes) -> bytes:
+    try:
+        with open_heif(image_bytes).to_pillow() as image:
+            with image.convert("RGB") as rgb_image:
+                output = BytesIO()
+                rgb_image.save(output, format="JPEG", quality=90, optimize=True)
+                return output.getvalue()
+    except (OSError, ValueError) as exc:
+        raise InvalidImageError(
+            "The HEIC or HEIF image could not be decoded."
+        ) from exc
+
+
 async def recognize_edible_items(
     image_bytes: bytes,
     mime_type: str,
-) -> tuple[str, RecognitionResult]:
+) -> tuple[str, str, bytes, str]:
     print(f"Recognizing edible items in image ({len(image_bytes)} bytes, {mime_type})")
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -51,15 +52,22 @@ async def recognize_edible_items(
         )
 
     model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+    if mime_type in HEIF_IMAGE_TYPES:
+        print(f"Converting HEIC/HEIF image to JPEG...")
+        image_bytes = await asyncio.to_thread(_convert_heif_to_jpeg, image_bytes)
+        print(f"Converted")
+        mime_type = "image/jpeg"
+
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
     image_url = f"data:{mime_type};base64,{image_base64}"
 
     # Notes: Uvicorn create a task for each request, where all task share a single event loop. 
     # To prevent the loop get stucked, use AsyncOpenAI here.
     async with AsyncOpenAI(api_key=api_key) as client:
-        response = await client.responses.parse(
+        print(f"Sending image to GPT-5.6 Sol for recognition...")
+        response = await client.responses.create(
             model=model,
-            reasoning={"effort": "high"},
+            reasoning={"effort": "low"},
             input=[
                 {
                     "role": "user",
@@ -73,12 +81,9 @@ async def recognize_edible_items(
                     ],
                 }
             ],
-            text_format=RecognitionResult,
             store=False,
         )
-
-    if isinstance(response.output_parsed, RecognitionResult):
-        return model, response.output_parsed
+        print(f"Received response.")
 
     for output in response.output:
         if output.type != "message":
@@ -88,6 +93,6 @@ async def recognize_edible_items(
                 raise RuntimeError(f"GPT-5.6 Sol refused the image: {content.refusal}")
 
     if response.output_text:
-        return model, RecognitionResult.model_validate_json(response.output_text)
+        return model, response.output_text.strip(), image_bytes, mime_type
 
     raise RuntimeError("GPT-5.6 Sol returned no recognition result.")

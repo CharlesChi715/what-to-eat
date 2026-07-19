@@ -92,3 +92,16 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 
 - Migrated photo recognition from Chat Completions to the Responses API while preserving async execution, high reasoning effort, high-detail image input, and Pydantic structured output.
 - Kept the one-shot recognition request stateless with `store=False`; all 4 backend tests pass.
+
+## 2026-07-19 — HEIC support
+
+- Added HEIC/HEIF upload support with local JPEG conversion through `pillow-heif` before OpenAI recognition.
+- Offloaded decoding to a worker thread so FastAPI's event loop remains responsive; all 8 backend tests pass.
+## 2026-07-19 — Unstructured recognition experiment
+
+- Created `experiment/unstructured-output` and changed GPT recognition from schema-parsed data to natural-language `output_text`.
+- Updated the upload response and frontend display; all 8 backend tests and the frontend production build pass.
+## 2026-07-19 — Sent-image frontend preview
+
+- Added a protected-path photo endpoint and an upload-response URL for the exact normalized bytes sent to OpenAI.
+- The frontend now renders those bytes under “Image sent to GPT”; all 8 backend tests and the frontend production build pass.

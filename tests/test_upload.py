@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 import backend.main as backend_main
-from backend.recognition import EdibleItem, RecognitionResult
+from backend.recognition import InvalidImageError
 
 
 class UploadPhotoTests(unittest.TestCase):
@@ -25,14 +25,15 @@ class UploadPhotoTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
-    def test_upload_returns_structured_edible_items(self, recognize: AsyncMock) -> None:
+    def test_upload_returns_unstructured_recognition_text(
+        self,
+        recognize: AsyncMock,
+    ) -> None:
         recognize.return_value = (
             "gpt-5.6-sol",
-            RecognitionResult(
-                edible_items=[
-                    EdibleItem(name="tomato", form="whole", certainty="high")
-                ]
-            ),
+            "I can see a whole tomato.",
+            b"fake-image",
+            "image/jpeg",
         )
 
         response = self.client.post(
@@ -42,7 +43,11 @@ class UploadPhotoTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["recognition"]["edible_items"][0]["name"], "tomato")
+        self.assertEqual(body["recognition"]["text"], "I can see a whole tomato.")
+        self.assertEqual(body["sent_image"]["mime_type"], "image/jpeg")
+        preview = self.client.get(body["sent_image"]["url"])
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.content, b"fake-image")
         self.assertTrue((self.repo_root / body["saved"]).is_file())
         recognize.assert_awaited_once_with(b"fake-image", "image/jpeg")
 
@@ -55,6 +60,51 @@ class UploadPhotoTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 415)
         recognize.assert_not_awaited()
+
+    @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
+    def test_upload_accepts_heic_with_generic_browser_mime_type(
+        self,
+        recognize: AsyncMock,
+    ) -> None:
+        recognize.return_value = (
+            "gpt-5.6-sol",
+            "No edible food is visible.",
+            b"converted-jpeg",
+            "image/jpeg",
+        )
+
+        response = self.client.post(
+            "/api/upload",
+            files={"photo": ("food.HEIC", b"heic-bytes", "application/octet-stream")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["sent_image"]["mime_type"], "image/jpeg")
+        self.assertTrue(body["sent_image"]["url"].endswith("-openai.jpg"))
+        preview = self.client.get(body["sent_image"]["url"])
+        self.assertEqual(preview.content, b"converted-jpeg")
+        recognize.assert_awaited_once_with(b"heic-bytes", "image/heic")
+
+    @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
+    def test_upload_reports_invalid_heic_as_bad_request(
+        self,
+        recognize: AsyncMock,
+    ) -> None:
+        recognize.side_effect = InvalidImageError(
+            "The HEIC or HEIF image could not be decoded."
+        )
+
+        response = self.client.post(
+            "/api/upload",
+            files={"photo": ("broken.heic", b"not-heic", "image/heic")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "The HEIC or HEIF image could not be decoded.",
+        )
 
 
 if __name__ == "__main__":
