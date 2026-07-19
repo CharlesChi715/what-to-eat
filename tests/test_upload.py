@@ -9,7 +9,7 @@ from PIL import Image
 
 import backend.main as backend_main
 from backend.recognition import (
-    BoundingBox,
+    FoodMarker,
     FollowUpPhotoRequest,
     InvalidImageError,
     RecognitionResult,
@@ -49,7 +49,7 @@ class UploadPhotoTests(unittest.TestCase):
         destination = self.repo_root / "portrait-overview.jpg"
         backend_main._create_item_overview_thumbnail(
             image_bytes.getvalue(),
-            BoundingBox(x_min=300, y_min=300, x_max=700, y_max=700),
+            FoodMarker(center_x=500, center_y=500, radius=220),
             destination,
         )
 
@@ -91,11 +91,10 @@ class UploadPhotoTests(unittest.TestCase):
                         location="center",
                         certainty="uncertain",
                         alternative_guesses=["red pepper"],
-                        bounding_box=BoundingBox(
-                            x_min=100,
-                            y_min=100,
-                            x_max=600,
-                            y_max=700,
+                        marker=FoodMarker(
+                            center_x=350,
+                            center_y=400,
+                            radius=220,
                         ),
                     )
                 ],

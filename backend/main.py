@@ -1,5 +1,4 @@
 import logging
-import math
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
 from backend.recognition import (
-    BoundingBox,
+    FoodMarker,
     InvalidImageError,
     RecognitionNotConfiguredError,
     recognize_edible_items,
@@ -42,31 +41,17 @@ app = FastAPI()
 
 def _create_item_overview_thumbnail(
     image_bytes: bytes,
-    bounding_box: BoundingBox,
+    marker: FoodMarker,
     destination: Path,
 ) -> None:
     with Image.open(BytesIO(image_bytes)) as source:
         image = ImageOps.exif_transpose(source)
         width, height = image.size
 
-        x_min = max(0, min(999, bounding_box.x_min))
-        y_min = max(0, min(999, bounding_box.y_min))
-        x_max = max(0, min(999, bounding_box.x_max))
-        y_max = max(0, min(999, bounding_box.y_max))
-
-        left = round(x_min / 999 * width)
-        top = round(y_min / 999 * height)
-        right = round(x_max / 999 * width)
-        bottom = round(y_max / 999 * height)
-
-        if right <= left or bottom <= top:
-            raise ValueError("Recognition returned an invalid food bounding box")
-
-        box_width = right - left
-        box_height = bottom - top
-        center_x = (left + right) / 2
-        center_y = (top + bottom) / 2
-        radius = math.ceil(math.hypot(box_width, box_height) / 2 * 1.12)
+        center_x = max(0, min(999, marker.center_x)) / 999 * (width - 1)
+        center_y = max(0, min(999, marker.center_y)) / 999 * (height - 1)
+        normalized_radius = max(20, min(500, marker.radius))
+        radius = normalized_radius / 999 * min(width, height)
         ring_box = (
             center_x - radius,
             center_y - radius,
@@ -172,7 +157,7 @@ async def upload_photo(
         try:
             _create_item_overview_thumbnail(
                 sent_image_bytes,
-                item.bounding_box,
+                item.marker,
                 thumbnail_path,
             )
         except (OSError, UnidentifiedImageError, ValueError):

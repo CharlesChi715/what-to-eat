@@ -9,13 +9,20 @@ from PIL import Image
 from pillow_heif import from_pillow
 
 from backend.recognition import (
-    BoundingBox,
+    FoodMarker,
     InvalidImageError,
     RecognitionResult,
     RecognitionNotConfiguredError,
     RecognizedItem,
     recognize_edible_items,
 )
+
+
+def _jpeg_bytes(size: tuple[int, int] = (200, 300)) -> bytes:
+    output = BytesIO()
+    with Image.new("RGB", size, color="white") as image:
+        image.save(output, format="JPEG")
+    return output.getvalue()
 
 
 class FakeAsyncOpenAI:
@@ -48,11 +55,10 @@ class FakeAsyncOpenAI:
                                         location="center",
                                         certainty="certain",
                                         alternative_guesses=[],
-                                        bounding_box=BoundingBox(
-                                            x_min=200,
-                                            y_min=100,
-                                            x_max=700,
-                                            y_max=800,
+                                        marker=FoodMarker(
+                                            center_x=450,
+                                            center_y=350,
+                                            radius=180,
                                         ),
                                     )
                                 ],
@@ -68,20 +74,21 @@ class FakeAsyncOpenAI:
 
 class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
     async def test_uses_structured_output_for_confirmation_and_follow_up(self) -> None:
+        image_bytes = _jpeg_bytes()
         with (
             patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
             patch("backend.recognition.AsyncOpenAI", FakeAsyncOpenAI),
         ):
             model, result, sent_image, sent_mime_type = await recognize_edible_items(
-                b"image-bytes",
+                image_bytes,
                 "image/jpeg",
             )
 
         self.assertEqual(model, "gpt-5.6-sol")
         self.assertEqual(result.items[0].name, "tomato")
         self.assertEqual(result.items[0].certainty, "certain")
-        self.assertEqual(result.items[0].bounding_box.x_min, 200)
-        self.assertEqual(sent_image, b"image-bytes")
+        self.assertEqual(result.items[0].marker.center_x, 450)
+        self.assertEqual(sent_image, image_bytes)
         self.assertEqual(sent_mime_type, "image/jpeg")
         self.assertEqual(
             FakeAsyncOpenAI.init_kwargs,
@@ -93,14 +100,15 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(request["text_format"], RecognitionResult)
         self.assertIs(request["store"], False)
         content = request["input"][0]["content"]
-        expected_image = base64.b64encode(b"image-bytes").decode("ascii")
-        self.assertEqual(
-            content[1]["image_url"],
-            f"data:image/jpeg;base64,{expected_image}",
-        )
+        prefix, gridded_base64 = content[1]["image_url"].split(",", maxsplit=1)
+        self.assertEqual(prefix, "data:image/jpeg;base64")
+        gridded_image = base64.b64decode(gridded_base64)
+        self.assertNotEqual(gridded_image, image_bytes)
+        with Image.open(BytesIO(gridded_image)) as grid:
+            self.assertEqual(grid.size, (200, 300))
         self.assertEqual(content[1]["detail"], "original")
         self.assertIn("0..999 coordinate space", content[0]["text"])
-        self.assertIn("double-check that each box encloses", content[0]["text"])
+        self.assertIn("point visibly ON the named food", content[0]["text"])
 
     async def test_includes_the_group_area_in_a_focused_follow_up_prompt(self) -> None:
         with (
@@ -108,7 +116,7 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
             patch("backend.recognition.AsyncOpenAI", FakeAsyncOpenAI),
         ):
             await recognize_edible_items(
-                b"image-bytes",
+                _jpeg_bytes(),
                 "image/jpeg",
                 focus_hint="vegetables in the back-left corner",
             )
@@ -136,10 +144,13 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
         prefix, jpeg_base64 = image_url.split(",", maxsplit=1)
         self.assertEqual(prefix, "data:image/jpeg;base64")
         self.assertEqual(sent_mime_type, "image/jpeg")
-        self.assertEqual(sent_image, base64.b64decode(jpeg_base64))
-        with Image.open(BytesIO(base64.b64decode(jpeg_base64))) as converted:
+        self.assertNotEqual(sent_image, base64.b64decode(jpeg_base64))
+        with Image.open(BytesIO(sent_image)) as converted:
             self.assertEqual(converted.format, "JPEG")
             self.assertEqual(converted.size, (2, 2))
+        with Image.open(BytesIO(base64.b64decode(jpeg_base64))) as gridded:
+            self.assertEqual(gridded.format, "JPEG")
+            self.assertEqual(gridded.size, (2, 2))
 
     async def test_rejects_invalid_heic_data(self) -> None:
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):

@@ -108,4 +108,6 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - 2026-07-20: Added per-item food thumbnails using GPT-provided normalized bounding boxes and backend-generated image crops, with full-image fallback.
 - 2026-07-20: Changed per-item thumbnails to full-scene overview images with each food marked by a red circle.
 - 2026-07-20: Removed thumbnail pillarboxing and made each red marker a true circle enclosing the full AI bounding box; tightened the coordinate prompt.
-- The frontend now renders those bytes under “Image sent to GPT”; all 8 backend tests and the frontend production build pass.
+- 2026-07-20: Replaced AI bounding boxes with grid-assisted food center/radius markers while keeping the user-facing photo clean.
+- 2026-07-20: Prevented duplicate recognition uploads by disabling the submit button while a request is running.
+- The frontend renders the clean recognition photo; all 11 backend tests and the frontend production build/lint pass.

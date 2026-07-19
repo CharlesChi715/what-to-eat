@@ -5,11 +5,10 @@ interface RecognizedItem {
   location: string;
   certainty: "certain" | "uncertain";
   alternative_guesses: string[];
-  bounding_box: {
-    x_min: number;
-    y_min: number;
-    x_max: number;
-    y_max: number;
+  marker: {
+    center_x: number;
+    center_y: number;
+    radius: number;
   };
   thumbnail_url: string;
 }
@@ -50,6 +49,7 @@ interface ActiveFollowUp {
 export default function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [status, setStatus] = useState("Pick a photo to begin.");
   const [sentImageUrl, setSentImageUrl] = useState<string | null>(null);
   const [recognition, setRecognition] = useState<Recognition | null>(null);
@@ -61,6 +61,8 @@ export default function App() {
   );
 
   async function upload() {
+    if (isUploading) return;
+
     if (!file) {
       setStatus(
         activeFollowUp
@@ -78,6 +80,7 @@ export default function App() {
 
     setStatus(activeFollowUp ? "Checking the closer photo…" : "Recognizing food…");
     setSentImageUrl(null);
+    setIsUploading(true);
     try {
       const res = await fetch("/api/upload", { method: "POST", body: form });
       if (!res.ok) {
@@ -111,6 +114,8 @@ export default function App() {
       setStatus("Review the result below.");
     } catch (err) {
       setStatus(`Server unreachable: ${(err as Error).message}`);
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -160,8 +165,19 @@ export default function App() {
             }
           }}
         />
-        <button type="button" onClick={upload} disabled={!file}>
-          {activeFollowUp ? "Upload focused photo" : "Recognize food"}
+        <button
+          type="button"
+          onClick={upload}
+          disabled={!file || isUploading}
+          aria-busy={isUploading}
+        >
+          {isUploading
+            ? activeFollowUp
+              ? "Uploading…"
+              : "Recognizing…"
+            : activeFollowUp
+              ? "Upload focused photo"
+              : "Recognize food"}
         </button>
         <p className="status" role="status">
           {status}
@@ -171,7 +187,11 @@ export default function App() {
       {sentImageUrl && (
         <section>
           <h2>Latest image checked</h2>
-          <img className="sent-image" src={sentImageUrl} alt="Image sent to GPT" />
+          <img
+            className="sent-image"
+            src={sentImageUrl}
+            alt="Clean uploaded image used for recognition"
+          />
         </section>
       )}
 

@@ -40,8 +40,9 @@ For details read `docs/MY_Devices.md`.
 
 - Recognition returns structured items, certainty, alternative guesses, and focused-photo requests.
 - The frontend lets users confirm or correct each item and add closer photos for grouped uncertainty.
-- Each item shows an aspect-correct full scene; its red circle encloses the AI bounding box.
+- Recognition uploads disable their submit button until the request finishes.
+- Each item shows an aspect-correct clean scene with a grid-assisted center/radius marker.
 - Uploads accept JPEG, PNG, WebP, HEIC, and HEIF; HEIC/HEIF is converted locally to JPEG.
-- The frontend shows the exact normalized image bytes sent to OpenAI after upload.
+- The frontend shows the clean normalized photo; only the model input receives a coordinate grid.
 - Backend loads `OPENAI_API_KEY` from the gitignored root `.env` file.
 - Next: add an OpenAI API key to `.env`, run both dev servers, and test recognition with food and non-food photos.
