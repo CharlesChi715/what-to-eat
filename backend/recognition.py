@@ -54,6 +54,8 @@ async def recognize_edible_items(
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
     image_url = f"data:{mime_type};base64,{image_base64}"
 
+    # Notes: Uvicorn create a task for each request, where all task share a single event loop. 
+    # To prevent the loop get stucked, use AsyncOpenAI here.
     async with AsyncOpenAI(api_key=api_key) as client:
         response = await client.responses.parse(
             model=model,
