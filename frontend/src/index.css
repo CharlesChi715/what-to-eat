@@ -84,8 +84,84 @@ h1 {
   padding: 1.25rem;
 }
 
-.upload-panel input[type="file"] {
-  width: 100%;
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.file-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.55rem;
+  border: 1px dashed #9eb0a2;
+  border-radius: 0.85rem;
+  background: #f7faf6;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.file-picker:hover {
+  border-color: #27633a;
+  background: #f0f7f1;
+}
+
+.file-input:focus-visible + .file-picker {
+  outline: 3px solid rgb(39 99 58 / 22%);
+  outline-offset: 2px;
+  border-color: #27633a;
+}
+
+.file-picker.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.file-picker-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.65rem;
+  color: white;
+  background: #27633a;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.file-picker-action svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.file-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #607066;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-picker-name.selected {
+  color: #17301f;
+  font-weight: 650;
 }
 
 .status {
@@ -241,5 +317,15 @@ h1 {
   .food-thumbnail {
     max-width: 7rem;
     max-height: 7rem;
+  }
+
+  .file-picker {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .file-picker-name {
+    padding: 0 0.45rem 0.25rem;
+    text-align: center;
   }
 }

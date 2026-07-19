@@ -2,7 +2,9 @@
 
 Newest first. One entry per completed deliverable.
 
-17/07/2026. Set up wireless access from my iMac to files on my Windows PC by exposing a WSL2 Python HTTP server over the local Wi-Fi network:
+## 2026-07-17
+
+Set up wireless access from my iMac to files on my Windows PC by exposing a WSL2 Python HTTP server over the local Wi-Fi network:
 
     I’m not exactly sure if this was the exact step：
     
@@ -38,6 +40,7 @@ iMac:
    http://192.168.0.12:8000
 
 If it stops working after a WSL restart, recreate step 6 because the WSL IP can change.
+
 ## 2026-07-17
 
 - Decided the MVP will use the OpenAI SDK for photo recognition instead of the local YOLO/MobileCLIP/PP-OCR pipeline; the local pipeline is deferred to a later cost-optimization phase.
@@ -110,4 +113,5 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - 2026-07-20: Removed thumbnail pillarboxing and made each red marker a true circle enclosing the full AI bounding box; tightened the coordinate prompt.
 - 2026-07-20: Replaced AI bounding boxes with grid-assisted food center/radius markers while keeping the user-facing photo clean.
 - 2026-07-20: Prevented duplicate recognition uploads by disabling the submit button while a request is running.
+- 2026-07-20: Replaced the native file chooser appearance with a responsive themed photo picker.
 - The frontend renders the clean recognition photo; all 11 backend tests and the frontend production build/lint pass.

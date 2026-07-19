@@ -152,10 +152,13 @@ export default function App() {
           </p>
         )}
         <input
+          id="food-photo"
           ref={fileInput}
+          className="file-input"
           type="file"
           accept="image/*,.heic,.heif"
           capture="environment"
+          disabled={isUploading}
           onChange={(event) => {
             setFile(event.target.files?.[0] ?? null);
             setSentImageUrl(null);
@@ -165,6 +168,26 @@ export default function App() {
             }
           }}
         />
+        <label
+          className={`file-picker${isUploading ? " disabled" : ""}`}
+          htmlFor="food-photo"
+          aria-disabled={isUploading}
+        >
+          <span className="file-picker-action">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M8.3 6.5 9.8 4.6h4.4l1.5 1.9H19a2 2 0 0 1 2 2v8.9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.3Z" />
+              <circle cx="12" cy="13" r="3.5" />
+            </svg>
+            {file ? "Change photo" : "Choose photo"}
+          </span>
+          <span
+            className={`file-picker-name${file ? " selected" : ""}`}
+            title={file?.name}
+            aria-live="polite"
+          >
+            {file?.name ?? "JPEG, PNG, WebP, HEIC or HEIF"}
+          </span>
+        </label>
         <button
           type="button"
           onClick={upload}
