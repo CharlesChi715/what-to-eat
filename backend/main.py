@@ -1,14 +1,17 @@
 import logging
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from backend.recognition import (
+    BoundingBox,
     InvalidImageError,
     RecognitionNotConfiguredError,
     recognize_edible_items,
@@ -36,6 +39,41 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
+def _create_item_thumbnail(
+    image_bytes: bytes,
+    bounding_box: BoundingBox,
+    destination: Path,
+) -> None:
+    with Image.open(BytesIO(image_bytes)) as source:
+        image = ImageOps.exif_transpose(source)
+        width, height = image.size
+
+        x_min = max(0, min(999, bounding_box.x_min))
+        y_min = max(0, min(999, bounding_box.y_min))
+        x_max = max(0, min(999, bounding_box.x_max))
+        y_max = max(0, min(999, bounding_box.y_max))
+
+        left = round(x_min / 999 * width)
+        top = round(y_min / 999 * height)
+        right = round(x_max / 999 * width)
+        bottom = round(y_max / 999 * height)
+
+        if right <= left or bottom <= top:
+            left, top, right, bottom = 0, 0, width, height
+        else:
+            padding_x = max(4, round((right - left) * 0.08))
+            padding_y = max(4, round((bottom - top) * 0.08))
+            left = max(0, left - padding_x)
+            top = max(0, top - padding_y)
+            right = min(width, right + padding_x)
+            bottom = min(height, bottom + padding_y)
+
+        with image.crop((left, top, right, bottom)) as crop:
+            crop.thumbnail((240, 240), Image.Resampling.LANCZOS)
+            with crop.convert("RGB") as rgb_crop:
+                rgb_crop.save(destination, format="JPEG", quality=88, optimize=True)
+
+
 @app.get("/api/photos/{filename}", response_class=FileResponse)
 async def get_photo(filename: str) -> FileResponse:
     photos_dir = PHOTOS_DIR.resolve()
@@ -46,7 +84,10 @@ async def get_photo(filename: str) -> FileResponse:
 
 
 @app.post("/api/upload")
-async def upload_photo(photo: UploadFile) -> dict[str, Any]:
+async def upload_photo(
+    photo: UploadFile,
+    focus_hint: str | None = Form(default=None, max_length=200),
+) -> dict[str, Any]:
     print(f"Received upload: {photo.filename} ({photo.content_type})")
     mime_type = (photo.content_type or "").lower()
     suffix = Path(photo.filename or "").suffix.lower()
@@ -78,8 +119,16 @@ async def upload_photo(photo: UploadFile) -> dict[str, Any]:
     dest.write_bytes(content)
 
     try:
-        model, recognition_text, sent_image_bytes, sent_mime_type = (
-            await recognize_edible_items(content, mime_type)
+        if focus_hint:
+            recognition_call = recognize_edible_items(
+                content,
+                mime_type,
+                focus_hint=focus_hint,
+            )
+        else:
+            recognition_call = recognize_edible_items(content, mime_type)
+        model, recognition_result, sent_image_bytes, sent_mime_type = (
+            await recognition_call
         )
     except InvalidImageError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -102,19 +151,38 @@ async def upload_photo(photo: UploadFile) -> dict[str, Any]:
         sent_image_path = PHOTOS_DIR / f"{dest.stem}-openai{sent_suffix}"
         sent_image_path.write_bytes(sent_image_bytes)
 
+    sent_image_url = f"/api/photos/{sent_image_path.name}"
+    recognition_payload = recognition_result.model_dump()
+    for index, (item, item_payload) in enumerate(
+        zip(recognition_result.items, recognition_payload["items"], strict=True),
+        start=1,
+    ):
+        thumbnail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}.jpg"
+        try:
+            _create_item_thumbnail(
+                sent_image_bytes,
+                item.bounding_box,
+                thumbnail_path,
+            )
+        except (OSError, UnidentifiedImageError, ValueError):
+            logger.warning("Could not crop thumbnail for recognized item %s", index)
+            item_payload["thumbnail_url"] = sent_image_url
+        else:
+            item_payload["thumbnail_url"] = f"/api/photos/{thumbnail_path.name}"
+
     print(f"Saved photo to {dest} ({len(content)} bytes)")
-    print(f"Recognition result: {recognition_text}")
+    print(f"Recognition result: {recognition_result.model_dump_json()}")
     return {
         "saved": str(dest.relative_to(REPO_ROOT)),
         "size_kb": round(len(content) / 1024, 1),
         "sent_image": {
-            "url": f"/api/photos/{sent_image_path.name}",
+            "url": sent_image_url,
             "mime_type": sent_mime_type,
             "size_kb": round(len(sent_image_bytes) / 1024, 1),
         },
         "recognition": {
             "model": model,
-            "text": recognition_text,
+            **recognition_payload,
         },
     }
 

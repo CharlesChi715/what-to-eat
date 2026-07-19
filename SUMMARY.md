@@ -38,7 +38,9 @@ For details read `docs/MY_Devices.md`.
 
 ## Current State / Next Step
 
-- On `experiment/unstructured-output`, recognition returns GPT's natural-language text instead of a fixed schema.
+- Recognition returns structured items, certainty, alternative guesses, and focused-photo requests.
+- The frontend lets users confirm or correct each item and add closer photos for grouped uncertainty.
+- Each recognized item shows a backend-generated crop of that food beside its confirmation entry.
 - Uploads accept JPEG, PNG, WebP, HEIC, and HEIF; HEIC/HEIF is converted locally to JPEG.
 - The frontend shows the exact normalized image bytes sent to OpenAI after upload.
 - Backend loads `OPENAI_API_KEY` from the gitignored root `.env` file.

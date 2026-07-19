@@ -104,4 +104,6 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 ## 2026-07-19 — Sent-image frontend preview
 
 - Added a protected-path photo endpoint and an upload-response URL for the exact normalized bytes sent to OpenAI.
+- 2026-07-20: Added structured food confirmation: isolated uncertainty gets a best guess with confirm/correct controls, while grouped uncertainty requests and merges a focused follow-up photo.
+- 2026-07-20: Added per-item food thumbnails using GPT-provided normalized bounding boxes and backend-generated image crops, with full-image fallback.
 - The frontend now renders those bytes under “Image sent to GPT”; all 8 backend tests and the frontend production build pass.

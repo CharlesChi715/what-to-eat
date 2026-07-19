@@ -9,8 +9,11 @@ from PIL import Image
 from pillow_heif import from_pillow
 
 from backend.recognition import (
+    BoundingBox,
     InvalidImageError,
+    RecognitionResult,
     RecognitionNotConfiguredError,
+    RecognizedItem,
     recognize_edible_items,
 )
 
@@ -21,7 +24,7 @@ class FakeAsyncOpenAI:
 
     def __init__(self, **kwargs: str) -> None:
         type(self).init_kwargs = kwargs
-        self.responses = SimpleNamespace(create=self.create_response)
+        self.responses = SimpleNamespace(parse=self.create_response)
 
     async def __aenter__(self) -> "FakeAsyncOpenAI":
         return self
@@ -32,13 +35,39 @@ class FakeAsyncOpenAI:
     async def create_response(self, **kwargs: object) -> SimpleNamespace:
         type(self).request_kwargs = kwargs
         return SimpleNamespace(
-            output=[],
-            output_text="I can see a whole tomato.",
+            output=[
+                SimpleNamespace(
+                    type="message",
+                    content=[
+                        SimpleNamespace(
+                            type="output_text",
+                            parsed=RecognitionResult(
+                                items=[
+                                    RecognizedItem(
+                                        name="tomato",
+                                        location="center",
+                                        certainty="certain",
+                                        alternative_guesses=[],
+                                        bounding_box=BoundingBox(
+                                            x_min=200,
+                                            y_min=100,
+                                            x_max=700,
+                                            y_max=800,
+                                        ),
+                                    )
+                                ],
+                                follow_up_photos=[],
+                                no_food_message="",
+                            ),
+                        )
+                    ],
+                )
+            ],
         )
 
 
 class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
-    async def test_uses_gpt_5_6_sol_with_inline_image_and_plain_text_output(self) -> None:
+    async def test_uses_structured_output_for_confirmation_and_follow_up(self) -> None:
         with (
             patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
             patch("backend.recognition.AsyncOpenAI", FakeAsyncOpenAI),
@@ -49,7 +78,9 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(model, "gpt-5.6-sol")
-        self.assertEqual(result, "I can see a whole tomato.")
+        self.assertEqual(result.items[0].name, "tomato")
+        self.assertEqual(result.items[0].certainty, "certain")
+        self.assertEqual(result.items[0].bounding_box.x_min, 200)
         self.assertEqual(sent_image, b"image-bytes")
         self.assertEqual(sent_mime_type, "image/jpeg")
         self.assertEqual(
@@ -58,8 +89,8 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
         )
         request = FakeAsyncOpenAI.request_kwargs
         self.assertEqual(request["model"], "gpt-5.6-sol")
-        self.assertEqual(request["reasoning"], {"effort": "high"})
-        self.assertNotIn("text_format", request)
+        self.assertEqual(request["reasoning"], {"effort": "low"})
+        self.assertIs(request["text_format"], RecognitionResult)
         self.assertIs(request["store"], False)
         content = request["input"][0]["content"]
         expected_image = base64.b64encode(b"image-bytes").decode("ascii")
@@ -67,7 +98,23 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
             content[1]["image_url"],
             f"data:image/jpeg;base64,{expected_image}",
         )
-        self.assertEqual(content[1]["detail"], "high")
+        self.assertEqual(content[1]["detail"], "original")
+        self.assertIn("0..999 coordinate space", content[0]["text"])
+
+    async def test_includes_the_group_area_in_a_focused_follow_up_prompt(self) -> None:
+        with (
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
+            patch("backend.recognition.AsyncOpenAI", FakeAsyncOpenAI),
+        ):
+            await recognize_edible_items(
+                b"image-bytes",
+                "image/jpeg",
+                focus_hint="vegetables in the back-left corner",
+            )
+
+        prompt = FakeAsyncOpenAI.request_kwargs["input"][0]["content"][0]["text"]
+        self.assertIn("closer follow-up photo", prompt)
+        self.assertIn("vegetables in the back-left corner", prompt)
 
     async def test_converts_heic_to_jpeg_before_sending_to_openai(self) -> None:
         with Image.new("RGB", (2, 2), color="red") as image:

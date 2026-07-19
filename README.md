@@ -2,7 +2,7 @@
 
 A low-cost personal food-inventory and recipe app. Take a photo of food, confirm what it is, track quantities and expiry dates, and get recipe suggestions for what needs using up.
 
-Status: early MVP — photo upload and GPT-5.6 Sol natural-language food recognition are wired end to end on the experimental unstructured-output branch.
+Status: early MVP — photo upload, structured GPT-5.6 Sol food recognition, cropped item thumbnails, user confirmation, and focused follow-up photos are wired end to end.
 
 ## Repo layout
 

@@ -1,12 +1,27 @@
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 import backend.main as backend_main
-from backend.recognition import InvalidImageError
+from backend.recognition import (
+    BoundingBox,
+    FollowUpPhotoRequest,
+    InvalidImageError,
+    RecognitionResult,
+    RecognizedItem,
+)
+
+
+def _test_jpeg() -> bytes:
+    output = BytesIO()
+    with Image.new("RGB", (400, 300), color="red") as image:
+        image.save(output, format="JPEG")
+    return output.getvalue()
 
 
 class UploadPhotoTests(unittest.TestCase):
@@ -25,31 +40,100 @@ class UploadPhotoTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
-    def test_upload_returns_unstructured_recognition_text(
+    def test_upload_returns_structured_items_for_confirmation(
+        self,
+        recognize: AsyncMock,
+    ) -> None:
+        image_bytes = _test_jpeg()
+        recognize.return_value = (
+            "gpt-5.6-sol",
+            RecognitionResult(
+                items=[
+                    RecognizedItem(
+                        name="tomato",
+                        location="center",
+                        certainty="uncertain",
+                        alternative_guesses=["red pepper"],
+                        bounding_box=BoundingBox(
+                            x_min=100,
+                            y_min=100,
+                            x_max=600,
+                            y_max=700,
+                        ),
+                    )
+                ],
+                follow_up_photos=[],
+                no_food_message="",
+            ),
+            image_bytes,
+            "image/jpeg",
+        )
+
+        response = self.client.post(
+            "/api/upload",
+            files={"photo": ("food.jpg", image_bytes, "image/jpeg")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["recognition"]["items"][0]["name"], "tomato")
+        self.assertEqual(body["recognition"]["items"][0]["certainty"], "uncertain")
+        self.assertEqual(
+            body["recognition"]["items"][0]["alternative_guesses"],
+            ["red pepper"],
+        )
+        self.assertEqual(body["sent_image"]["mime_type"], "image/jpeg")
+        preview = self.client.get(body["sent_image"]["url"])
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.content, image_bytes)
+        thumbnail_url = body["recognition"]["items"][0]["thumbnail_url"]
+        self.assertTrue(thumbnail_url.endswith("-item-1.jpg"))
+        thumbnail = self.client.get(thumbnail_url)
+        self.assertEqual(thumbnail.status_code, 200)
+        with Image.open(BytesIO(thumbnail.content)) as thumbnail_image:
+            self.assertEqual(thumbnail_image.format, "JPEG")
+            self.assertLessEqual(thumbnail_image.width, 240)
+            self.assertLessEqual(thumbnail_image.height, 240)
+        self.assertTrue((self.repo_root / body["saved"]).is_file())
+        recognize.assert_awaited_once_with(image_bytes, "image/jpeg")
+
+    @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
+    def test_follow_up_upload_passes_the_group_area_to_recognition(
         self,
         recognize: AsyncMock,
     ) -> None:
         recognize.return_value = (
             "gpt-5.6-sol",
-            "I can see a whole tomato.",
+            RecognitionResult(
+                items=[],
+                follow_up_photos=[
+                    FollowUpPhotoRequest(
+                        area="back-left corner",
+                        reason="Several vegetables overlap.",
+                    )
+                ],
+                no_food_message="",
+            ),
             b"fake-image",
             "image/jpeg",
         )
 
         response = self.client.post(
             "/api/upload",
-            files={"photo": ("food.jpg", b"fake-image", "image/jpeg")},
+            files={"photo": ("closer.jpg", b"fake-image", "image/jpeg")},
+            data={"focus_hint": "back-left corner"},
         )
 
         self.assertEqual(response.status_code, 200)
-        body = response.json()
-        self.assertEqual(body["recognition"]["text"], "I can see a whole tomato.")
-        self.assertEqual(body["sent_image"]["mime_type"], "image/jpeg")
-        preview = self.client.get(body["sent_image"]["url"])
-        self.assertEqual(preview.status_code, 200)
-        self.assertEqual(preview.content, b"fake-image")
-        self.assertTrue((self.repo_root / body["saved"]).is_file())
-        recognize.assert_awaited_once_with(b"fake-image", "image/jpeg")
+        self.assertEqual(
+            response.json()["recognition"]["follow_up_photos"][0]["area"],
+            "back-left corner",
+        )
+        recognize.assert_awaited_once_with(
+            b"fake-image",
+            "image/jpeg",
+            focus_hint="back-left corner",
+        )
 
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
     def test_upload_rejects_non_image_content(self, recognize: AsyncMock) -> None:
@@ -68,7 +152,11 @@ class UploadPhotoTests(unittest.TestCase):
     ) -> None:
         recognize.return_value = (
             "gpt-5.6-sol",
-            "No edible food is visible.",
+            RecognitionResult(
+                items=[],
+                follow_up_photos=[],
+                no_food_message="No edible food is visible.",
+            ),
             b"converted-jpeg",
             "image/jpeg",
         )

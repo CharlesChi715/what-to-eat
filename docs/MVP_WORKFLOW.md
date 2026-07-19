@@ -11,8 +11,8 @@ Backend: my WSL2 PC.
 2. **Frontend:** Sends the images to the backend.
 3. **Backend:** Uses an OpenAI vision model to identify the food.
 4. **Frontend:** Shows the recognition results for confirmation.
-    a. if the ingredients that not sure grouped together (e.g. at the same place), ask another for photo for that place.
-    b. For scattered not sured one, give guess of it and ask for comfirmation.
+    a. For uncertain ingredients grouped in one area, asks for a closer photo of that area.
+    b. For an isolated uncertain ingredient, shows the best guess and asks the user to confirm or correct it.
 5. **User:** Confirms or corrects the results.
 
 ## 2. Update inventory

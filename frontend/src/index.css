@@ -1,15 +1,245 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #17301f;
+  background: #f5f1e8;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  margin: 2rem;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 0.65rem;
+  padding: 0.7rem 1rem;
+  color: white;
+  background: #27633a;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1f512f;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button.secondary {
+  color: #27633a;
+  background: #e5eee7;
 }
 
 main {
-  max-width: 48rem;
+  width: min(52rem, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 5rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0.35rem;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+}
+
+.intro,
+.location,
+.status,
+.results-heading span {
+  color: #607066;
+}
+
+.upload-panel,
+.food-card,
+.follow-up-card,
+.empty-result {
+  border: 1px solid #d7ded5;
+  border-radius: 1rem;
+  background: #fffdf8;
+  box-shadow: 0 0.4rem 1.4rem rgb(42 73 51 / 8%);
+}
+
+.upload-panel {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1.25rem;
+}
+
+.upload-panel input[type="file"] {
+  width: 100%;
+}
+
+.status {
+  margin-bottom: 0;
+}
+
+.focus-note {
+  margin-bottom: 0;
+  padding: 0.75rem;
+  border-left: 0.25rem solid #d48c22;
+  background: #fff5df;
 }
 
 .sent-image {
   display: block;
   max-width: 100%;
-  max-height: 70vh;
+  max-height: 60vh;
+  border-radius: 1rem;
   object-fit: contain;
+}
+
+.results {
+  margin-top: 2.5rem;
+}
+
+.results-heading,
+.food-card,
+.follow-up-card,
+.actions,
+.confirmed-answer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.results-heading {
+  align-items: baseline;
+}
+
+.food-card,
+.follow-up-card {
+  margin: 1rem 0;
+  padding: 1.25rem;
+}
+
+.food-card h3,
+.follow-up-card h3 {
+  margin: 0.45rem 0 0.25rem;
+}
+
+.food-card p,
+.follow-up-card p {
+  margin-bottom: 0;
+}
+
+.food-identification {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.food-thumbnail {
+  width: 6rem;
+  height: 6rem;
+  flex: 0 0 6rem;
+  border: 1px solid #d7ded5;
+  border-radius: 0.8rem;
+  background: #edf1eb;
+  object-fit: cover;
+}
+
+.certainty {
+  display: inline-block;
+  border-radius: 99rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.certainty.certain {
+  color: #27633a;
+  background: #dff0e3;
+}
+
+.certainty.uncertain {
+  color: #815216;
+  background: #fff0cf;
+}
+
+.actions,
+.confirmed-answer {
+  flex: 0 0 auto;
+}
+
+.confirmed-answer strong {
+  color: #27633a;
+}
+
+.correction {
+  display: grid;
+  min-width: 15rem;
+  gap: 0.45rem;
+}
+
+.correction input {
+  min-width: 0;
+  border: 1px solid #aab8ad;
+  border-radius: 0.55rem;
+  padding: 0.65rem;
+}
+
+.follow-ups {
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #d7ded5;
+}
+
+.follow-up-card {
+  border-color: #e8c889;
+  background: #fff9ec;
+}
+
+.empty-result {
+  padding: 1.25rem;
+}
+
+@media (max-width: 42rem) {
+  main {
+    padding-top: 1.5rem;
+  }
+
+  .results-heading,
+  .food-card,
+  .follow-up-card,
+  .confirmed-answer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .food-card button,
+  .follow-up-card button {
+    width: 100%;
+  }
+
+  .food-thumbnail {
+    width: 5rem;
+    height: 5rem;
+    flex-basis: 5rem;
+  }
 }
