@@ -17,8 +17,7 @@ load_dotenv(REPO_ROOT / ".env")
 
 PHOTOS_DIR = REPO_ROOT / "data" / "photos"
 FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
-# Inline bytes are base64-encoded in transit, so stay below Gemini's 20 MB
-# total-request limit with room for the prompt and JSON envelope.
+# Inline image bytes grow when base64-encoded, so keep request payloads modest.
 MAX_INLINE_IMAGE_BYTES = 14 * 1024 * 1024
 SUPPORTED_IMAGE_TYPES = {
     "image/jpeg",
@@ -64,10 +63,10 @@ async def upload_photo(photo: UploadFile) -> dict[str, Any]:
     except RecognitionNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("Gemini food recognition failed")
+        logger.exception("GPT-5.6 Sol food recognition failed")
         raise HTTPException(
             status_code=502,
-            detail="Gemini could not recognize this image. Try again.",
+            detail="GPT-5.6 Sol could not recognize this image. Try again.",
         ) from exc
 
     print(f"Saved photo to {dest} ({len(content)} bytes)")

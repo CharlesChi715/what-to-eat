@@ -27,7 +27,7 @@ class UploadPhotoTests(unittest.TestCase):
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
     def test_upload_returns_structured_edible_items(self, recognize: AsyncMock) -> None:
         recognize.return_value = (
-            "gemini-3-flash-preview",
+            "gpt-5.6-sol",
             RecognitionResult(
                 edible_items=[
                     EdibleItem(name="tomato", form="whole", certainty="high")

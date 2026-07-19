@@ -2,7 +2,7 @@
 
 A low-cost personal food-inventory and recipe app. Take a photo of food, confirm what it is, track quantities and expiry dates, and get recipe suggestions for what needs using up.
 
-Status: early MVP — photo upload and Gemini edible-object recognition are wired end to end.
+Status: early MVP — photo upload and GPT-5.6 Sol edible-object recognition are wired end to end.
 
 ## Repo layout
 
@@ -18,31 +18,30 @@ pyproject.toml      Python dependency record (+ uv.lock)
 
 Prerequisites: [uv](https://docs.astral.sh/uv/), Node.js 20+.
 
-Create a Gemini API key in Google AI Studio. Then copy the safe template and
-put the real key in the new `.env` file:
+Create an API key in the [OpenAI API dashboard](https://platform.openai.com/api-keys).
+Then copy the safe template and put the real key in the new `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
 ```dotenv
-GEMINI_API_KEY=your-real-key
+OPENAI_API_KEY=your-real-key
 ```
 
 The backend loads the root `.env` automatically. `.env` is ignored by Git;
 never put the real key in `.env.example`.
 
-To test another compatible
-model without changing code, set `GEMINI_MODEL` in `.env`.
+To test another OpenAI model without changing code, set `OPENAI_MODEL` in `.env`.
 
 Two terminals from the repo root:
 
 ```bash
-# Terminal A — backend on :8000
-uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-
 # Terminal B — frontend dev server on :5173 (proxies /api/* to :8000)
 cd frontend && npm install && npm run dev
+
+# Terminal A — backend on :8000
+uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Open http://localhost:5173.

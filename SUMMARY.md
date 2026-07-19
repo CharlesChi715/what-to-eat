@@ -27,7 +27,7 @@ For details read `docs/MY_Devices.md`.
 
 ## Decisions
 
-- MVP photo recognition uses the Gemini API (`gemini-3-flash-preview`) and returns only visible edible-object candidates; label OCR remains a separate later step.
+- MVP photo recognition uses the OpenAI API (`gpt-5.6-sol`) and returns only visible edible-object candidates; label OCR remains a separate later step.
 - Local recognition pipeline is deferred to a later cost-optimization phase, behind the same recognition interface.
 - In the later product, the cloud API stays as a permanent fallback (local server unreachable, low-confidence results, model failures).
 - In long term, optimize the preference by preference of each diet in long term.
@@ -38,6 +38,6 @@ For details read `docs/MY_Devices.md`.
 
 ## Current State / Next Step
 
-- Upload flow saves the original photo, sends it to Gemini 3 Flash, and returns structured edible-item candidates for confirmation.
-- Backend loads `GEMINI_API_KEY` from the gitignored root `.env` file.
-- Next: add the real key to `.env`, run both dev servers, and test recognition with food and non-food photos.
+- Upload flow sends saved photos to GPT-5.6 Sol through the Responses API and returns structured edible-item candidates for confirmation.
+- Backend loads `OPENAI_API_KEY` from the gitignored root `.env` file.
+- Next: add an OpenAI API key to `.env`, run both dev servers, and test recognition with food and non-food photos.

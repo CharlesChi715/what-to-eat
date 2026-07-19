@@ -74,3 +74,21 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - Live Gemini 3 Flash recognition is blocked by:
   `google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billing. Learn more at https://ai.google.dev/gemini-api/docs/billing#prepay. ', 'status': 'RESOURCE_EXHAUSTED'}}`
 - Next action: add or restore prepaid credits for the Gemini API project, then retry the upload.
+
+## 2026-07-19
+
+- Replaced Gemini photo recognition with Meta Muse Spark 1.1 via the Meta Model API.
+- Removed `google-genai`, added the OpenAI-compatible client, updated configuration/docs, and passed 4 backend tests plus the frontend production build.
+
+## 2026-07-19 — correction
+
+- Switched photo recognition from Muse Spark 1.1 to Kimi K3 (`kimi-k3`) using Moonshot's official API endpoint and key configuration.
+
+## 2026-07-19 — GPT-5.6 Sol
+
+- Switched MVP photo recognition from Kimi K3 to OpenAI GPT-5.6 Sol with native Pydantic structured-output parsing and explicit high-detail image input.
+
+## 2026-07-19 — Responses API
+
+- Migrated photo recognition from Chat Completions to the Responses API while preserving async execution, high reasoning effort, high-detail image input, and Pydantic structured output.
+- Kept the one-shot recognition request stateless with `store=False`; all 4 backend tests pass.
