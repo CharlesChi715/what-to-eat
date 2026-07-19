@@ -198,7 +198,7 @@ export default function App() {
                   <img
                     className="food-thumbnail"
                     src={item.thumbnail_url}
-                    alt={`Cropped view of ${item.name}`}
+                    alt={`Full photo with ${item.name} circled in red`}
                   />
                   <div>
                     <span className={`certainty ${item.certainty}`}>

@@ -100,6 +100,7 @@ class RecognizeEdibleItemsTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(content[1]["detail"], "original")
         self.assertIn("0..999 coordinate space", content[0]["text"])
+        self.assertIn("double-check that each box encloses", content[0]["text"])
 
     async def test_includes_the_group_area_in_a_focused_follow_up_prompt(self) -> None:
         with (

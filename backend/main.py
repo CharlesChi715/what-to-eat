@@ -1,4 +1,5 @@
 import logging
+import math
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,7 @@ from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
 from backend.recognition import (
     BoundingBox,
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
-def _create_item_thumbnail(
+def _create_item_overview_thumbnail(
     image_bytes: bytes,
     bounding_box: BoundingBox,
     destination: Path,
@@ -59,19 +60,29 @@ def _create_item_thumbnail(
         bottom = round(y_max / 999 * height)
 
         if right <= left or bottom <= top:
-            left, top, right, bottom = 0, 0, width, height
-        else:
-            padding_x = max(4, round((right - left) * 0.08))
-            padding_y = max(4, round((bottom - top) * 0.08))
-            left = max(0, left - padding_x)
-            top = max(0, top - padding_y)
-            right = min(width, right + padding_x)
-            bottom = min(height, bottom + padding_y)
+            raise ValueError("Recognition returned an invalid food bounding box")
 
-        with image.crop((left, top, right, bottom)) as crop:
-            crop.thumbnail((240, 240), Image.Resampling.LANCZOS)
-            with crop.convert("RGB") as rgb_crop:
-                rgb_crop.save(destination, format="JPEG", quality=88, optimize=True)
+        box_width = right - left
+        box_height = bottom - top
+        center_x = (left + right) / 2
+        center_y = (top + bottom) / 2
+        radius = math.ceil(math.hypot(box_width, box_height) / 2 * 1.12)
+        ring_box = (
+            center_x - radius,
+            center_y - radius,
+            center_x + radius,
+            center_y + radius,
+        )
+
+        overview = image.convert("RGB")
+        ring_width = max(5, round(max(width, height) * 0.012))
+        ImageDraw.Draw(overview).ellipse(
+            ring_box,
+            outline=(230, 35, 35),
+            width=ring_width,
+        )
+        overview.thumbnail((320, 240), Image.Resampling.LANCZOS)
+        overview.save(destination, format="JPEG", quality=90, optimize=True)
 
 
 @app.get("/api/photos/{filename}", response_class=FileResponse)
@@ -159,13 +170,16 @@ async def upload_photo(
     ):
         thumbnail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}.jpg"
         try:
-            _create_item_thumbnail(
+            _create_item_overview_thumbnail(
                 sent_image_bytes,
                 item.bounding_box,
                 thumbnail_path,
             )
         except (OSError, UnidentifiedImageError, ValueError):
-            logger.warning("Could not crop thumbnail for recognized item %s", index)
+            logger.warning(
+                "Could not create overview thumbnail for recognized item %s",
+                index,
+            )
             item_payload["thumbnail_url"] = sent_image_url
         else:
             item_payload["thumbnail_url"] = f"/api/photos/{thumbnail_path.name}"

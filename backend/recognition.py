@@ -25,7 +25,9 @@ food, put the best guess in `name`, mark it "uncertain", and provide plausible
 alternatives. For every returned item, provide a tight bounding box around that
 food in a fixed 0..999 coordinate space with the origin at the image's top-left.
 Use `x_min`, `y_min`, `x_max`, and `y_max`, and ensure each minimum is smaller
-than its corresponding maximum.
+than its corresponding maximum. These coordinates directly place a red marker
+on the user's photo. Before responding, double-check that each box encloses the
+named food itself—not nearby shelf space, containers, or another item.
 
 When two or more uncertain foods are clustered, touching, overlapping, or
 otherwise difficult to distinguish in the same area, do not guess each one.
