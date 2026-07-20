@@ -119,3 +119,4 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - 2026-07-20: Grouped recognition results into certain and uncertain sections, with bulk confirmation in the certain group.
 - 2026-07-20: Added accessible thumbnail enlargement with backdrop, close button, Escape support, and focus restoration.
 - 2026-07-20: Split marked food imagery into compact thumbnails and full-resolution detail URLs so enlarged views stay sharp.
+- 2026-07-20: Replaced per-item thumbnail/detail files with one shared original-resolution image plus client-rendered marker references; restored enlargement and grouped new upload files.

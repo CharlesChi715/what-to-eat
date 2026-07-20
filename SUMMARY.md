@@ -43,7 +43,8 @@ For details read `docs/MY_Devices.md`.
 - Recognition results separate certain from uncertain foods; untouched certain items can be confirmed together.
 - Recognition uploads disable their submit button until the request finishes.
 - The photo picker uses a responsive custom control with filename and format feedback.
-- Each item uses a small marked thumbnail and a sharp, full-resolution marked inspection view.
+- Items share one original-resolution image per upload; React draws their marker references for card and enlarged views.
+- New uploads use one UUID folder and create no per-item image files.
 - Uploads accept JPEG, PNG, WebP, HEIC, and HEIF; HEIC/HEIF is converted locally to JPEG.
 - The frontend shows the clean normalized photo; only the model input receives a coordinate grid.
 - Backend loads `OPENAI_API_KEY` from the gitignored root `.env` file.

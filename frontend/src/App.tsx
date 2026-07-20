@@ -10,8 +10,7 @@ interface RecognizedItem {
     center_y: number;
     radius: number;
   };
-  thumbnail_url: string;
-  detail_url: string;
+  image_url: string;
 }
 
 interface FollowUpPhoto {
@@ -47,9 +46,51 @@ interface ActiveFollowUp {
   area: string;
 }
 
-interface ExpandedImage {
-  url: string;
-  foodName: string;
+interface ImageSize {
+  width: number;
+  height: number;
+}
+
+interface MarkedFoodImageProps {
+  item: RecognizedItem;
+  imageClassName: string;
+}
+
+function MarkedFoodImage({ item, imageClassName }: MarkedFoodImageProps) {
+  const [imageSize, setImageSize] = useState<ImageSize | null>(null);
+  const markerRadius = imageSize
+    ? (item.marker.radius / 999) * Math.min(imageSize.width, imageSize.height)
+    : 0;
+
+  return (
+    <span className="marked-food-image">
+      <img
+        className={imageClassName}
+        src={item.image_url}
+        alt={`Full photo with ${item.name} circled in red`}
+        onLoad={(event) =>
+          setImageSize({
+            width: event.currentTarget.naturalWidth,
+            height: event.currentTarget.naturalHeight,
+          })
+        }
+      />
+      {imageSize && (
+        <svg
+          className="food-marker-overlay"
+          viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <circle
+            cx={(item.marker.center_x / 999) * imageSize.width}
+            cy={(item.marker.center_y / 999) * imageSize.height}
+            r={markerRadius}
+          />
+        </svg>
+      )}
+    </span>
+  );
 }
 
 export default function App() {
@@ -66,21 +107,18 @@ export default function App() {
   const [activeFollowUp, setActiveFollowUp] = useState<ActiveFollowUp | null>(
     null,
   );
-  const [expandedImage, setExpandedImage] = useState<ExpandedImage | null>(null);
+  const [expandedItem, setExpandedItem] = useState<RecognizedItem | null>(null);
 
   useEffect(() => {
-    if (!expandedImage) return;
+    if (!expandedItem) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Tab") {
-        event.preventDefault();
-      }
-
+      if (event.key === "Tab") event.preventDefault();
       if (event.key === "Escape") {
-        setExpandedImage(null);
+        setExpandedItem(null);
         requestAnimationFrame(() => expandedImageTrigger.current?.focus());
       }
     }
@@ -90,10 +128,10 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [expandedImage]);
+  }, [expandedItem]);
 
   function closeExpandedImage() {
-    setExpandedImage(null);
+    setExpandedItem(null);
     requestAnimationFrame(() => expandedImageTrigger.current?.focus());
   }
 
@@ -218,14 +256,10 @@ export default function App() {
             aria-label={`Enlarge image of ${item.name}`}
             onClick={(event) => {
               expandedImageTrigger.current = event.currentTarget;
-              setExpandedImage({ url: item.detail_url, foodName: item.name });
+              setExpandedItem(item);
             }}
           >
-            <img
-              className="food-thumbnail"
-              src={item.thumbnail_url}
-              alt={`Full photo with ${item.name} circled in red`}
-            />
+            <MarkedFoodImage item={item} imageClassName="food-thumbnail" />
           </button>
           <div>
             <span className={`certainty ${item.certainty}`}>
@@ -452,7 +486,7 @@ export default function App() {
         </section>
       )}
 
-      {expandedImage && (
+      {expandedItem && (
         <div
           className="image-lightbox-backdrop"
           onClick={(event) => {
@@ -466,16 +500,17 @@ export default function App() {
             aria-labelledby="expanded-image-heading"
           >
             <div className="image-lightbox-header">
-              <h2 id="expanded-image-heading">Check {expandedImage.foodName}</h2>
+              <h2 id="expanded-image-heading">Check {expandedItem.name}</h2>
               <button type="button" onClick={closeExpandedImage} autoFocus>
                 Close
               </button>
             </div>
-            <img
-              className="expanded-food-image"
-              src={expandedImage.url}
-              alt={`Large view of ${expandedImage.foodName} circled in red`}
-            />
+            <div className="expanded-image-stage">
+              <MarkedFoodImage
+                item={expandedItem}
+                imageClassName="expanded-food-image"
+              />
+            </div>
           </section>
         </div>
       )}

@@ -24,8 +24,8 @@ For each item, return its best name, short location, certainty, alternatives,
 and marker. Use "certain" only when evidence is strong. For an isolated
 uncertain item, return the best guess with plausible alternatives.
 
-The cyan grid uses 0..999 coordinates with the origin at the top-left. Place
-`center_x` and `center_y` directly on visible pixels of the named food. Set
+The cyan grid uses a 0..999 coordinate space with the origin at the top-left.
+Set `center_x` and `center_y` to a point visibly ON the named food. Set
 `radius` from 20 to 500, where 100 equals one tenth of the image's shorter side.
 Use the smallest circle that encloses the food, and ensure it agrees with
 `location`.

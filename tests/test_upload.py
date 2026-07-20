@@ -39,43 +39,6 @@ class UploadPhotoTests(unittest.TestCase):
         backend_main.PHOTOS_DIR = self.original_photos_dir
         self.temp_dir.cleanup()
 
-    def test_overview_preserves_portrait_shape_and_draws_a_round_marker(
-        self,
-    ) -> None:
-        image_bytes = BytesIO()
-        with Image.new("RGB", (300, 400), color="white") as image:
-            image.save(image_bytes, format="JPEG")
-
-        destination = self.repo_root / "portrait-overview.jpg"
-        backend_main._create_item_overview_thumbnail(
-            image_bytes.getvalue(),
-            FoodMarker(center_x=500, center_y=500, radius=220),
-            destination,
-        )
-
-        with Image.open(destination) as overview:
-            self.assertEqual(overview.size, (180, 240))
-            rgb_overview = overview.convert("RGB")
-            red_coordinates = [
-                (x, y)
-                for y in range(rgb_overview.height)
-                for x in range(rgb_overview.width)
-                if (
-                    (pixel := rgb_overview.getpixel((x, y)))[0] > 180
-                    and pixel[1] < 100
-                    and pixel[2] < 100
-                )
-            ]
-
-        self.assertTrue(red_coordinates)
-        red_width = max(x for x, _ in red_coordinates) - min(
-            x for x, _ in red_coordinates
-        )
-        red_height = max(y for _, y in red_coordinates) - min(
-            y for _, y in red_coordinates
-        )
-        self.assertAlmostEqual(red_width, red_height, delta=3)
-
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
     def test_upload_returns_structured_items_for_confirmation(
         self,
@@ -96,7 +59,18 @@ class UploadPhotoTests(unittest.TestCase):
                             center_y=400,
                             radius=220,
                         ),
-                    )
+                    ),
+                    RecognizedItem(
+                        name="carrot",
+                        location="right",
+                        certainty="certain",
+                        alternative_guesses=[],
+                        marker=FoodMarker(
+                            center_x=750,
+                            center_y=500,
+                            radius=180,
+                        ),
+                    ),
                 ],
                 follow_up_photos=[],
                 no_food_message="",
@@ -122,36 +96,15 @@ class UploadPhotoTests(unittest.TestCase):
         preview = self.client.get(body["sent_image"]["url"])
         self.assertEqual(preview.status_code, 200)
         self.assertEqual(preview.content, image_bytes)
-        thumbnail_url = body["recognition"]["items"][0]["thumbnail_url"]
-        self.assertTrue(thumbnail_url.endswith("-item-1.jpg"))
-        thumbnail = self.client.get(thumbnail_url)
-        self.assertEqual(thumbnail.status_code, 200)
-        with Image.open(BytesIO(thumbnail.content)) as thumbnail_image:
-            self.assertEqual(thumbnail_image.format, "JPEG")
-            self.assertLessEqual(thumbnail_image.width, 320)
-            self.assertLessEqual(thumbnail_image.height, 240)
-            self.assertEqual(thumbnail_image.size, (320, 240))
-            rgb_thumbnail = thumbnail_image.convert("RGB")
-            red_pixels = sum(
-                1
-                for y in range(rgb_thumbnail.height)
-                for x in range(rgb_thumbnail.width)
-                if (
-                    (pixel := rgb_thumbnail.getpixel((x, y)))[0] > 180
-                    and pixel[1] < 100
-                    and pixel[2] < 100
-                )
-            )
-            self.assertGreater(red_pixels, 0)
-            thumbnail_width = thumbnail_image.width
-        detail_url = body["recognition"]["items"][0]["detail_url"]
-        self.assertTrue(detail_url.endswith("-item-1-detail.jpg"))
-        detail = self.client.get(detail_url)
-        self.assertEqual(detail.status_code, 200)
-        with Image.open(BytesIO(detail.content)) as detail_image:
-            self.assertEqual(detail_image.format, "JPEG")
-            self.assertEqual(detail_image.size, (400, 300))
-            self.assertGreater(detail_image.width, thumbnail_width)
+        items = body["recognition"]["items"]
+        self.assertEqual(items[0]["image_url"], body["sent_image"]["url"])
+        self.assertEqual(items[1]["image_url"], body["sent_image"]["url"])
+        self.assertTrue(items[0]["image_url"].endswith("/original.jpg"))
+        self.assertEqual(items[0]["marker"]["center_x"], 350)
+        stored_files = [
+            path for path in backend_main.PHOTOS_DIR.rglob("*") if path.is_file()
+        ]
+        self.assertEqual(stored_files, [self.repo_root / body["saved"]])
         self.assertTrue((self.repo_root / body["saved"]).is_file())
         recognize.assert_awaited_once_with(image_bytes, "image/jpeg")
 
@@ -227,9 +180,15 @@ class UploadPhotoTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["sent_image"]["mime_type"], "image/jpeg")
-        self.assertTrue(body["sent_image"]["url"].endswith("-openai.jpg"))
+        self.assertTrue(body["sent_image"]["url"].endswith("/display.jpg"))
         preview = self.client.get(body["sent_image"]["url"])
         self.assertEqual(preview.content, b"converted-jpeg")
+        stored_files = [
+            path.name
+            for path in backend_main.PHOTOS_DIR.rglob("*")
+            if path.is_file()
+        ]
+        self.assertCountEqual(stored_files, ["original.heic", "display.jpg"])
         recognize.assert_awaited_once_with(b"heic-bytes", "image/heic")
 
     @patch("backend.main.recognize_edible_items", new_callable=AsyncMock)
@@ -251,6 +210,16 @@ class UploadPhotoTests(unittest.TestCase):
             response.json()["detail"],
             "The HEIC or HEIF image could not be decoded.",
         )
+        self.assertFalse(backend_main.PHOTOS_DIR.exists())
+
+    def test_photo_route_rejects_parent_directory_traversal(self) -> None:
+        outside_photo = self.repo_root / "private.jpg"
+        outside_photo.write_bytes(b"not-public")
+
+        response = self.client.get("/api/photos/%2E%2E%2Fprivate.jpg")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotEqual(response.content, b"not-public")
 
 
 if __name__ == "__main__":

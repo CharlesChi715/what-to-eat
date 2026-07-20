@@ -275,6 +275,28 @@ h1 {
   outline-offset: 3px;
 }
 
+.marked-food-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.food-marker-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.food-marker-overlay circle {
+  fill: none;
+  stroke: #e62323;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+}
+
 .food-thumbnail {
   width: auto;
   height: auto;
@@ -383,6 +405,12 @@ h1 {
 
 .image-lightbox-header h2 {
   margin-bottom: 0;
+}
+
+.expanded-image-stage {
+  display: grid;
+  min-width: 0;
+  place-items: center;
 }
 
 .expanded-food-image {

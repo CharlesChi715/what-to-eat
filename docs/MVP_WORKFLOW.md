@@ -15,7 +15,7 @@ Backend: my WSL2 PC.
     b. For an isolated uncertain ingredient, shows the best guess and asks the user to confirm or correct it.
     c. Groups certain and uncertain ingredients into separate sections.
     d. For certain ingredients, adds a button to confirm all items in one click.
-    e. Loads a full-resolution marked image when the user enlarges a thumbnail.
+    e. Reuses one original-resolution image and draws each item's marker from coordinates; thumbnails can be enlarged for inspection.
 5. **User:** Confirms or corrects the results.
 
 ## 2. Update inventory

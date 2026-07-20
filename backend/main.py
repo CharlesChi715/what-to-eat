@@ -1,5 +1,4 @@
 import logging
-from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -8,10 +7,8 @@ from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
-from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
 from backend.recognition import (
-    FoodMarker,
     InvalidImageError,
     RecognitionNotConfiguredError,
     recognize_edible_items,
@@ -39,50 +36,16 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
-def _create_item_overview_thumbnail(
-    image_bytes: bytes,
-    marker: FoodMarker,
-    destination: Path,
-    detail_destination: Path | None = None,
-) -> None:
-    with Image.open(BytesIO(image_bytes)) as source:
-        image = ImageOps.exif_transpose(source)
-        width, height = image.size
-
-        center_x = max(0, min(999, marker.center_x)) / 999 * (width - 1)
-        center_y = max(0, min(999, marker.center_y)) / 999 * (height - 1)
-        normalized_radius = max(20, min(500, marker.radius))
-        radius = normalized_radius / 999 * min(width, height)
-        ring_box = (
-            center_x - radius,
-            center_y - radius,
-            center_x + radius,
-            center_y + radius,
-        )
-
-        overview = image.convert("RGB")
-        ring_width = max(5, round(max(width, height) * 0.012))
-        ImageDraw.Draw(overview).ellipse(
-            ring_box,
-            outline=(230, 35, 35),
-            width=ring_width,
-        )
-        if detail_destination is not None:
-            overview.save(
-                detail_destination,
-                format="JPEG",
-                quality=92,
-                optimize=True,
-            )
-        overview.thumbnail((320, 240), Image.Resampling.LANCZOS)
-        overview.save(destination, format="JPEG", quality=90, optimize=True)
+def _photo_url(photo_path: Path) -> str:
+    relative_path = photo_path.relative_to(PHOTOS_DIR).as_posix()
+    return f"/api/photos/{relative_path}"
 
 
-@app.get("/api/photos/{filename}", response_class=FileResponse)
-async def get_photo(filename: str) -> FileResponse:
+@app.get("/api/photos/{requested_path:path}", response_class=FileResponse)
+async def get_photo(requested_path: str) -> FileResponse:
     photos_dir = PHOTOS_DIR.resolve()
-    photo_path = (PHOTOS_DIR / filename).resolve()
-    if photo_path.parent != photos_dir or not photo_path.is_file():
+    photo_path = (PHOTOS_DIR / requested_path).resolve()
+    if photos_dir not in photo_path.parents or not photo_path.is_file():
         raise HTTPException(status_code=404, detail="Image not found.")
     return FileResponse(photo_path)
 
@@ -117,11 +80,6 @@ async def upload_photo(
             detail="The image is too large. Upload an image smaller than 14 MB.",
         )
 
-    PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
-    saved_suffix = Path(photo.filename or "photo.jpg").suffix or ".jpg"
-    dest = PHOTOS_DIR / f"{uuid4().hex}{saved_suffix}"
-    dest.write_bytes(content)
-
     try:
         if focus_hint:
             recognition_call = recognize_edible_items(
@@ -145,6 +103,12 @@ async def upload_photo(
             detail="GPT-5.6 Sol could not recognize this image. Try again.",
         ) from exc
 
+    upload_dir = PHOTOS_DIR / uuid4().hex
+    upload_dir.mkdir(parents=True)
+    saved_suffix = (Path(photo.filename or "photo.jpg").suffix or ".jpg").lower()
+    dest = upload_dir / f"original{saved_suffix}"
+    dest.write_bytes(content)
+
     sent_image_path = dest
     if sent_image_bytes != content or sent_mime_type != mime_type:
         sent_suffix = {
@@ -152,34 +116,13 @@ async def upload_photo(
             "image/png": ".png",
             "image/webp": ".webp",
         }[sent_mime_type]
-        sent_image_path = PHOTOS_DIR / f"{dest.stem}-openai{sent_suffix}"
+        sent_image_path = upload_dir / f"display{sent_suffix}"
         sent_image_path.write_bytes(sent_image_bytes)
 
-    sent_image_url = f"/api/photos/{sent_image_path.name}"
+    sent_image_url = _photo_url(sent_image_path)
     recognition_payload = recognition_result.model_dump()
-    for index, (item, item_payload) in enumerate(
-        zip(recognition_result.items, recognition_payload["items"], strict=True),
-        start=1,
-    ):
-        thumbnail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}.jpg"
-        detail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}-detail.jpg"
-        try:
-            _create_item_overview_thumbnail(
-                sent_image_bytes,
-                item.marker,
-                thumbnail_path,
-                detail_path,
-            )
-        except (OSError, UnidentifiedImageError, ValueError):
-            logger.warning(
-                "Could not create overview thumbnail for recognized item %s",
-                index,
-            )
-            item_payload["thumbnail_url"] = sent_image_url
-            item_payload["detail_url"] = sent_image_url
-        else:
-            item_payload["thumbnail_url"] = f"/api/photos/{thumbnail_path.name}"
-            item_payload["detail_url"] = f"/api/photos/{detail_path.name}"
+    for item_payload in recognition_payload["items"]:
+        item_payload["image_url"] = sent_image_url
 
     print(f"Saved photo to {dest} ({len(content)} bytes)")
     print(f"Recognition result: {recognition_result.model_dump_json()}")
