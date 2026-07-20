@@ -40,9 +40,10 @@ For details read `docs/MY_Devices.md`.
 
 - Recognition returns structured items, certainty, alternative guesses, and focused-photo requests.
 - The frontend lets users confirm or correct each item and add closer photos for grouped uncertainty.
+- Recognition results separate certain from uncertain foods; untouched certain items can be confirmed together.
 - Recognition uploads disable their submit button until the request finishes.
 - The photo picker uses a responsive custom control with filename and format feedback.
-- Each item shows an aspect-correct clean scene with a grid-assisted center/radius marker.
+- Each item shows an aspect-correct, marked scene that can be enlarged for inspection.
 - Uploads accept JPEG, PNG, WebP, HEIC, and HEIF; HEIC/HEIF is converted locally to JPEG.
 - The frontend shows the clean normalized photo; only the model input receives a coordinate grid.
 - Backend loads `OPENAI_API_KEY` from the gitignored root `.env` file.

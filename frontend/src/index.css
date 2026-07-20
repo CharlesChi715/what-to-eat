@@ -188,6 +188,7 @@ h1 {
 }
 
 .results-heading,
+.result-group-heading,
 .food-card,
 .follow-up-card,
 .actions,
@@ -202,15 +203,45 @@ h1 {
   align-items: baseline;
 }
 
+.result-group {
+  margin-top: 1.75rem;
+}
+
+.result-group + .result-group {
+  padding-top: 1.75rem;
+  border-top: 1px solid #d7ded5;
+}
+
+.result-group-heading h3,
+.result-group-heading p {
+  margin-bottom: 0;
+}
+
+.result-group-heading {
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  background: #eff7f0;
+}
+
+.uncertain-group .result-group-heading {
+  background: #fff5df;
+}
+
+.result-group-heading p {
+  margin-top: 0.3rem;
+  color: #607066;
+}
+
 .food-card,
 .follow-up-card {
   margin: 1rem 0;
   padding: 1.25rem;
 }
 
-.food-card h3,
+.food-card h4,
 .follow-up-card h3 {
   margin: 0.45rem 0 0.25rem;
+  font-size: 1.17em;
 }
 
 .food-card p,
@@ -225,6 +256,25 @@ h1 {
   gap: 1rem;
 }
 
+.thumbnail-button {
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 0.8rem;
+  color: inherit;
+  background: transparent;
+  cursor: zoom-in;
+  line-height: 0;
+}
+
+.thumbnail-button:hover {
+  background: transparent;
+}
+
+.thumbnail-button:focus-visible {
+  outline: 3px solid rgb(39 99 58 / 35%);
+  outline-offset: 3px;
+}
+
 .food-thumbnail {
   width: auto;
   height: auto;
@@ -234,6 +284,14 @@ h1 {
   display: block;
   border: 1px solid #d7ded5;
   border-radius: 0.8rem;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.thumbnail-button:hover .food-thumbnail {
+  border-color: #27633a;
+  transform: scale(1.03);
 }
 
 .certainty {
@@ -291,12 +349,58 @@ h1 {
   padding: 1.25rem;
 }
 
+.image-lightbox-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(10 20 13 / 82%);
+  backdrop-filter: blur(3px);
+  cursor: zoom-out;
+}
+
+.image-lightbox {
+  display: grid;
+  width: min(70rem, 100%);
+  max-height: calc(100vh - 2rem);
+  gap: 1rem;
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #fffdf8;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 35%);
+  cursor: default;
+}
+
+.image-lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.image-lightbox-header h2 {
+  margin-bottom: 0;
+}
+
+.expanded-food-image {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 8rem);
+  border-radius: 0.8rem;
+  background: #101712;
+  object-fit: contain;
+}
+
 @media (max-width: 42rem) {
   main {
     padding-top: 1.5rem;
   }
 
   .results-heading,
+  .result-group-heading,
   .food-card,
   .follow-up-card,
   .confirmed-answer {
@@ -309,9 +413,15 @@ h1 {
     flex-direction: column;
   }
 
+  .result-group-heading button,
   .food-card button,
   .follow-up-card button {
     width: 100%;
+  }
+
+  .food-card .thumbnail-button {
+    width: fit-content;
+    align-self: flex-start;
   }
 
   .food-thumbnail {

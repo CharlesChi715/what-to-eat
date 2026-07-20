@@ -13,6 +13,9 @@ Backend: my WSL2 PC.
 4. **Frontend:** Shows the recognition results for confirmation.
     a. For uncertain ingredients grouped in one area, asks for a closer photo of that area.
     b. For an isolated uncertain ingredient, shows the best guess and asks the user to confirm or correct it.
+    c. Groups certain and uncertain ingredients into separate sections.
+    d. For certain ingredients, adds a button to confirm all items in one click.
+    e. Lets the user enlarge an item's thumbnail to inspect it clearly.
 5. **User:** Confirms or corrects the results.
 
 ## 2. Update inventory

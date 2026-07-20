@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface RecognizedItem {
   name: string;
@@ -46,8 +46,14 @@ interface ActiveFollowUp {
   area: string;
 }
 
+interface ExpandedImage {
+  url: string;
+  foodName: string;
+}
+
 export default function App() {
   const fileInput = useRef<HTMLInputElement>(null);
+  const expandedImageTrigger = useRef<HTMLButtonElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [status, setStatus] = useState("Pick a photo to begin.");
@@ -59,6 +65,36 @@ export default function App() {
   const [activeFollowUp, setActiveFollowUp] = useState<ActiveFollowUp | null>(
     null,
   );
+  const [expandedImage, setExpandedImage] = useState<ExpandedImage | null>(null);
+
+  useEffect(() => {
+    if (!expandedImage) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Tab") {
+        event.preventDefault();
+      }
+
+      if (event.key === "Escape") {
+        setExpandedImage(null);
+        requestAnimationFrame(() => expandedImageTrigger.current?.focus());
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [expandedImage]);
+
+  function closeExpandedImage() {
+    setExpandedImage(null);
+    requestAnimationFrame(() => expandedImageTrigger.current?.focus());
+  }
 
   async function upload() {
     if (isUploading) return;
@@ -136,9 +172,137 @@ export default function App() {
     }));
   }
 
+  function confirmAllCertain() {
+    if (!recognition) return;
+
+    setConfirmations((current) => {
+      const next = { ...current };
+
+      recognition.items.forEach((item, index) => {
+        if (item.certainty === "certain" && current[index] === undefined) {
+          next[index] = { status: "confirmed", value: item.name };
+        }
+      });
+
+      return next;
+    });
+  }
+
   const confirmedCount = Object.values(confirmations).filter(
     (answer) => answer.status === "confirmed",
   ).length;
+  const unreviewedCertainCount =
+    recognition?.items.filter(
+      (item, index) =>
+        item.certainty === "certain" && confirmations[index] === undefined,
+    ).length ?? 0;
+  const indexedItems =
+    recognition?.items.map((item, index) => ({ item, index })) ?? [];
+  const certainItems = indexedItems.filter(
+    ({ item }) => item.certainty === "certain",
+  );
+  const uncertainItems = indexedItems.filter(
+    ({ item }) => item.certainty === "uncertain",
+  );
+
+  function renderFoodCard(item: RecognizedItem, index: number) {
+    const answer = confirmations[index];
+
+    return (
+      <article className="food-card" key={`${item.location}-${index}`}>
+        <div className="food-identification">
+          <button
+            type="button"
+            className="thumbnail-button"
+            aria-label={`Enlarge image of ${item.name}`}
+            onClick={(event) => {
+              expandedImageTrigger.current = event.currentTarget;
+              setExpandedImage({ url: item.thumbnail_url, foodName: item.name });
+            }}
+          >
+            <img
+              className="food-thumbnail"
+              src={item.thumbnail_url}
+              alt={`Full photo with ${item.name} circled in red`}
+            />
+          </button>
+          <div>
+            <span className={`certainty ${item.certainty}`}>
+              {item.certainty === "uncertain" ? "Best guess" : "Looks clear"}
+            </span>
+            <h4>{item.name}</h4>
+            <p className="location">Location: {item.location}</p>
+            {item.certainty === "uncertain" &&
+              item.alternative_guesses.length > 0 && (
+                <p>Could also be: {item.alternative_guesses.join(", ")}</p>
+              )}
+          </div>
+        </div>
+
+        {answer?.status === "confirmed" ? (
+          <div className="confirmed-answer">
+            <strong>Confirmed: {answer.value}</strong>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                setConfirmations((current) => ({
+                  ...current,
+                  [index]: { status: "correcting", value: answer.value },
+                }))
+              }
+            >
+              Change
+            </button>
+          </div>
+        ) : answer?.status === "correcting" ? (
+          <form
+            className="correction"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const value = answer.value.trim();
+              if (value) confirmItem(index, value);
+            }}
+          >
+            <label htmlFor={`correction-${index}`}>What is it?</label>
+            <input
+              id={`correction-${index}`}
+              value={answer.value}
+              autoFocus
+              onChange={(event) =>
+                setConfirmations((current) => ({
+                  ...current,
+                  [index]: {
+                    status: "correcting",
+                    value: event.target.value,
+                  },
+                }))
+              }
+            />
+            <button type="submit">Save correction</button>
+          </form>
+        ) : (
+          <div className="actions">
+            <button type="button" onClick={() => confirmItem(index, item.name)}>
+              Confirm {item.name}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                setConfirmations((current) => ({
+                  ...current,
+                  [index]: { status: "correcting", value: "" },
+                }))
+              }
+            >
+              Correct it
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  }
 
   return (
     <main>
@@ -223,7 +387,7 @@ export default function App() {
           <div className="results-heading">
             <h2 id="results-heading">Confirm the foods</h2>
             {recognition.items.length > 0 && (
-              <span>
+              <span aria-live="polite">
                 {confirmedCount} of {recognition.items.length} confirmed
               </span>
             )}
@@ -233,95 +397,37 @@ export default function App() {
             <p className="empty-result">{recognition.no_food_message}</p>
           )}
 
-          {recognition.items.map((item, index) => {
-            const answer = confirmations[index];
-            return (
-              <article className="food-card" key={`${item.location}-${index}`}>
-                <div className="food-identification">
-                  <img
-                    className="food-thumbnail"
-                    src={item.thumbnail_url}
-                    alt={`Full photo with ${item.name} circled in red`}
-                  />
-                  <div>
-                    <span className={`certainty ${item.certainty}`}>
-                      {item.certainty === "uncertain"
-                        ? "Best guess"
-                        : "Looks clear"}
-                    </span>
-                    <h3>{item.name}</h3>
-                    <p className="location">Location: {item.location}</p>
-                    {item.certainty === "uncertain" &&
-                      item.alternative_guesses.length > 0 && (
-                        <p>Could also be: {item.alternative_guesses.join(", ")}</p>
-                      )}
-                  </div>
+          {certainItems.length > 0 && (
+            <section className="result-group" aria-labelledby="certain-foods-heading">
+              <div className="result-group-heading">
+                <div>
+                  <h3 id="certain-foods-heading">Looks clear</h3>
+                  <p>Foods the recognition model is confident about.</p>
                 </div>
-
-                {answer?.status === "confirmed" ? (
-                  <div className="confirmed-answer">
-                    <strong>Confirmed: {answer.value}</strong>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() =>
-                        setConfirmations((current) => ({
-                          ...current,
-                          [index]: { status: "correcting", value: answer.value },
-                        }))
-                      }
-                    >
-                      Change
-                    </button>
-                  </div>
-                ) : answer?.status === "correcting" ? (
-                  <form
-                    className="correction"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const value = answer.value.trim();
-                      if (value) confirmItem(index, value);
-                    }}
-                  >
-                    <label htmlFor={`correction-${index}`}>What is it?</label>
-                    <input
-                      id={`correction-${index}`}
-                      value={answer.value}
-                      autoFocus
-                      onChange={(event) =>
-                        setConfirmations((current) => ({
-                          ...current,
-                          [index]: {
-                            status: "correcting",
-                            value: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                    <button type="submit">Save correction</button>
-                  </form>
-                ) : (
-                  <div className="actions">
-                    <button type="button" onClick={() => confirmItem(index, item.name)}>
-                      Confirm {item.name}
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() =>
-                        setConfirmations((current) => ({
-                          ...current,
-                          [index]: { status: "correcting", value: "" },
-                        }))
-                      }
-                    >
-                      Correct it
-                    </button>
-                  </div>
+                {unreviewedCertainCount > 0 && (
+                  <button type="button" onClick={confirmAllCertain}>
+                    Confirm all clear ({unreviewedCertainCount})
+                  </button>
                 )}
-              </article>
-            );
-          })}
+              </div>
+              {certainItems.map(({ item, index }) => renderFoodCard(item, index))}
+            </section>
+          )}
+
+          {uncertainItems.length > 0 && (
+            <section
+              className="result-group uncertain-group"
+              aria-labelledby="uncertain-foods-heading"
+            >
+              <div className="result-group-heading">
+                <div>
+                  <h3 id="uncertain-foods-heading">Needs your review</h3>
+                  <p>Check each best guess and correct it when needed.</p>
+                </div>
+              </div>
+              {uncertainItems.map(({ item, index }) => renderFoodCard(item, index))}
+            </section>
+          )}
 
           {recognition.follow_up_photos.length > 0 && (
             <div className="follow-ups">
@@ -343,6 +449,34 @@ export default function App() {
             </div>
           )}
         </section>
+      )}
+
+      {expandedImage && (
+        <div
+          className="image-lightbox-backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeExpandedImage();
+          }}
+        >
+          <section
+            className="image-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="expanded-image-heading"
+          >
+            <div className="image-lightbox-header">
+              <h2 id="expanded-image-heading">Check {expandedImage.foodName}</h2>
+              <button type="button" onClick={closeExpandedImage} autoFocus>
+                Close
+              </button>
+            </div>
+            <img
+              className="expanded-food-image"
+              src={expandedImage.url}
+              alt={`Large view of ${expandedImage.foodName} circled in red`}
+            />
+          </section>
+        </div>
       )}
     </main>
   );

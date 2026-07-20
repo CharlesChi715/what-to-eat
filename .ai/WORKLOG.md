@@ -115,3 +115,6 @@ If it stops working after a WSL restart, recreate step 6 because the WSL IP can 
 - 2026-07-20: Prevented duplicate recognition uploads by disabling the submit button while a request is running.
 - 2026-07-20: Replaced the native file chooser appearance with a responsive themed photo picker.
 - The frontend renders the clean recognition photo; all 11 backend tests and the frontend production build/lint pass.
+- 2026-07-20: Added one-click confirmation for untouched certain recognition results; frontend build and lint pass.
+- 2026-07-20: Grouped recognition results into certain and uncertain sections, with bulk confirmation in the certain group.
+- 2026-07-20: Added accessible thumbnail enlargement with backdrop, close button, Escape support, and focus restoration.
