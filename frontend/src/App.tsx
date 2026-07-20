@@ -11,6 +11,7 @@ interface RecognizedItem {
     radius: number;
   };
   thumbnail_url: string;
+  detail_url: string;
 }
 
 interface FollowUpPhoto {
@@ -217,7 +218,7 @@ export default function App() {
             aria-label={`Enlarge image of ${item.name}`}
             onClick={(event) => {
               expandedImageTrigger.current = event.currentTarget;
-              setExpandedImage({ url: item.thumbnail_url, foodName: item.name });
+              setExpandedImage({ url: item.detail_url, foodName: item.name });
             }}
           >
             <img

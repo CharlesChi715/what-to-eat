@@ -387,8 +387,10 @@ h1 {
 
 .expanded-food-image {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   max-height: calc(100vh - 8rem);
+  margin: 0 auto;
   border-radius: 0.8rem;
   background: #101712;
   object-fit: contain;

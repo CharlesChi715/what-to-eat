@@ -43,6 +43,7 @@ def _create_item_overview_thumbnail(
     image_bytes: bytes,
     marker: FoodMarker,
     destination: Path,
+    detail_destination: Path | None = None,
 ) -> None:
     with Image.open(BytesIO(image_bytes)) as source:
         image = ImageOps.exif_transpose(source)
@@ -66,6 +67,13 @@ def _create_item_overview_thumbnail(
             outline=(230, 35, 35),
             width=ring_width,
         )
+        if detail_destination is not None:
+            overview.save(
+                detail_destination,
+                format="JPEG",
+                quality=92,
+                optimize=True,
+            )
         overview.thumbnail((320, 240), Image.Resampling.LANCZOS)
         overview.save(destination, format="JPEG", quality=90, optimize=True)
 
@@ -154,11 +162,13 @@ async def upload_photo(
         start=1,
     ):
         thumbnail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}.jpg"
+        detail_path = PHOTOS_DIR / f"{dest.stem}-item-{index}-detail.jpg"
         try:
             _create_item_overview_thumbnail(
                 sent_image_bytes,
                 item.marker,
                 thumbnail_path,
+                detail_path,
             )
         except (OSError, UnidentifiedImageError, ValueError):
             logger.warning(
@@ -166,8 +176,10 @@ async def upload_photo(
                 index,
             )
             item_payload["thumbnail_url"] = sent_image_url
+            item_payload["detail_url"] = sent_image_url
         else:
             item_payload["thumbnail_url"] = f"/api/photos/{thumbnail_path.name}"
+            item_payload["detail_url"] = f"/api/photos/{detail_path.name}"
 
     print(f"Saved photo to {dest} ({len(content)} bytes)")
     print(f"Recognition result: {recognition_result.model_dump_json()}")

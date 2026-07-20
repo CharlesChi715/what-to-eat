@@ -143,6 +143,15 @@ class UploadPhotoTests(unittest.TestCase):
                 )
             )
             self.assertGreater(red_pixels, 0)
+            thumbnail_width = thumbnail_image.width
+        detail_url = body["recognition"]["items"][0]["detail_url"]
+        self.assertTrue(detail_url.endswith("-item-1-detail.jpg"))
+        detail = self.client.get(detail_url)
+        self.assertEqual(detail.status_code, 200)
+        with Image.open(BytesIO(detail.content)) as detail_image:
+            self.assertEqual(detail_image.format, "JPEG")
+            self.assertEqual(detail_image.size, (400, 300))
+            self.assertGreater(detail_image.width, thumbnail_width)
         self.assertTrue((self.repo_root / body["saved"]).is_file())
         recognize.assert_awaited_once_with(image_bytes, "image/jpeg")
 
